@@ -24,7 +24,22 @@ public sealed class JsonPathBindingFilter : IBindingFilter
             return null;
         }
 
-        var json = value as string ?? value.ToString();
+        // The value can arrive as a raw JSON string (the webhook body), a System.Text.Json
+        // JsonElement, or a dictionary/array rehydrated from workflow persistence. Normalise
+        // all of these to a JSON string before parsing — a bare value.ToString() on a
+        // dictionary yields its type name, not JSON, which is why paths silently resolved to null.
+        var json = value switch
+        {
+            string s => s,
+            JsonElement je => je.ValueKind switch
+            {
+                JsonValueKind.String => je.GetString(),
+                JsonValueKind.Null or JsonValueKind.Undefined => null,
+                _ => je.GetRawText(),
+            },
+            _ => JsonSerializer.Serialize(value),
+        };
+
         if (string.IsNullOrWhiteSpace(json))
         {
             return null;

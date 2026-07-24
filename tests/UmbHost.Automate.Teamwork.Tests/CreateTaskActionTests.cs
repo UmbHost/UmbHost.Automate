@@ -17,7 +17,7 @@ public class CreateTaskActionTests
     {
         var handler = new Mock<HttpMessageHandler>();
         handler.SetupRequest(HttpMethod.Post, r => r.RequestUri!.AbsoluteUri.EndsWith("tasklists/42/tasks.json"))
-               .ReturnsResponse(HttpStatusCode.Created, new StringContent("{\"affected\":{\"taskIds\":[9001]}}"));
+               .ReturnsResponse(HttpStatusCode.Created, new StringContent("{\"task\":{\"id\":9001,\"name\":\"123 - Fix bug\"}}"));
         var factory = handler.CreateClientFactory();
 
         var sut = new CreateTaskAction(ActionTestHarness.Infrastructure, factory);

@@ -77,7 +77,7 @@ public sealed class CreateTaskAction : ActionBase<CreateTaskSettings, CreateTask
         try
         {
             using var doc = JsonDocument.Parse(raw);
-            taskId = doc.RootElement.GetProperty("affected").GetProperty("taskIds")[0].GetInt64();
+            taskId = doc.RootElement.GetProperty("task").GetProperty("id").GetInt64();
         }
         catch (Exception ex)
         {
