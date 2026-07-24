@@ -6,7 +6,7 @@
     <Nullable>enable</Nullable>
 
     <PackageId>UmbHost.Automate.Teamwork</PackageId>
-    <Version>1.0.3</Version>
+    <Version>1.0.0</Version>
     <Authors>UmbHost</Authors>
     <Company>UmbHost</Company>
     <Description>Teamwork Projects connection type and actions for Umbraco Automate.</Description>
