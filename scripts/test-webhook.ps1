@@ -21,7 +21,9 @@ param(
     [string]$Action = 'opened',
     [string]$Repo = 'UmbHost/test',
     [int]$Number = 42,
-    [string]$Title = 'Test issue from local'
+    [string]$Title = 'Test issue from local',
+    [string]$Content = "This is the **issue body** from a local test.`n`nSteps to reproduce:`n1. Fire the webhook`n2. Check the Teamwork task description",
+    [string]$Sender = 'AaronSadlerUK'
 )
 
 $owner, $name = $Repo.Split('/', 2)
@@ -30,9 +32,11 @@ $payload = [ordered]@{
     issue      = [ordered]@{
         number   = $Number
         title    = $Title
+        body     = $Content
         html_url = "https://github.com/$Repo/issues/$Number"
     }
     repository = [ordered]@{ full_name = $Repo; name = $name; owner = @{ login = $owner } }
+    sender     = [ordered]@{ login = $Sender }
 }
 $body = $payload | ConvertTo-Json -Compress -Depth 6
 
