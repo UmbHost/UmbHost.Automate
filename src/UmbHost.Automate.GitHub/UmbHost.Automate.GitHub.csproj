@@ -12,7 +12,11 @@
     <Description>GitHub connection type, actions, a jsonpath binding filter and an X-Hub-Signature-256 webhook authenticator for Umbraco Automate.</Description>
     <PackageTags>umbraco;automate;github;umbraco-marketplace</PackageTags>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <PackageProjectUrl>https://github.com/UmbHost/UmbHost.Automate</PackageProjectUrl>
+    <RepositoryUrl>https://github.com/UmbHost/UmbHost.Automate</RepositoryUrl>
     <RepositoryType>git</RepositoryType>
+    <PackageIcon>umbHostAutomateGitHub.png</PackageIcon>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
 
     <GeneratePackageOnBuild>false</GeneratePackageOnBuild>
     <IncludeSymbols>true</IncludeSymbols>
@@ -23,6 +27,13 @@
     <PackageReference Include="Umbraco.Automate.Core" Version="[17.0.0, 19.0.0)" />
     <PackageReference Include="Umbraco.Automate.OpenIddict" Version="[17.0.0, 19.0.0)" />
     <PackageReference Include="Umbraco.Cms.Core" Version="[17.4.0, 19.0.0)" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Include="README.md" Pack="true" PackagePath="\" />
+    <None Include="umbraco-marketplace.json" Pack="true" PackagePath="\" />
+    <None Include="..\..\umbHostAutomateGitHub.png" Pack="true" PackagePath="\" />
+    <None Include="..\..\LICENSE" Pack="true" PackagePath="\" />
   </ItemGroup>
 
 </Project>

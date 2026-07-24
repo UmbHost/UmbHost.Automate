@@ -12,7 +12,11 @@
     <Description>Teamwork Projects connection type and actions for Umbraco Automate.</Description>
     <PackageTags>umbraco;automate;teamwork;umbraco-marketplace</PackageTags>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <PackageProjectUrl>https://github.com/UmbHost/UmbHost.Automate</PackageProjectUrl>
+    <RepositoryUrl>https://github.com/UmbHost/UmbHost.Automate</RepositoryUrl>
     <RepositoryType>git</RepositoryType>
+    <PackageIcon>umbHostAutomateTeamwork.png</PackageIcon>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
 
     <GeneratePackageOnBuild>false</GeneratePackageOnBuild>
     <IncludeSymbols>true</IncludeSymbols>
@@ -22,6 +26,13 @@
   <ItemGroup>
     <PackageReference Include="Umbraco.Automate.Core" Version="[17.0.0, 19.0.0)" />
     <PackageReference Include="Umbraco.Cms.Core" Version="[17.4.0, 19.0.0)" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Include="README.md" Pack="true" PackagePath="\" />
+    <None Include="umbraco-marketplace.json" Pack="true" PackagePath="\" />
+    <None Include="..\..\umbHostAutomateTeamwork.png" Pack="true" PackagePath="\" />
+    <None Include="..\..\LICENSE" Pack="true" PackagePath="\" />
   </ItemGroup>
 
 </Project>
