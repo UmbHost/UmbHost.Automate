@@ -18,6 +18,8 @@ public sealed class TeamworkComposer : IComposer
             .Add<TeamworkConnectionType>();
 
         builder.WithCollectionBuilder<ActionCollectionBuilder>()
-            .Add<CreateTaskAction>();
+            .Add<CreateTaskAction>()
+            .Add<AddTaskCommentAction>()
+            .Add<SetTaskStatusAction>();
     }
 }

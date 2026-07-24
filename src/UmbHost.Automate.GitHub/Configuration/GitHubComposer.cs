@@ -29,6 +29,8 @@ public sealed class GitHubComposer : IComposer
             .Add<GitHubConnectionType>();
 
         builder.WithCollectionBuilder<ActionCollectionBuilder>()
-            .Add<RenameIssueTitleAction>();
+            .Add<RenameIssueTitleAction>()
+            .Add<AddIssueCommentAction>()
+            .Add<SetIssueStateAction>();
     }
 }
