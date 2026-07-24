@@ -1,0 +1,28 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+
+    <PackageId>UmbHost.Automate.GitHub</PackageId>
+    <Version>1.0.0</Version>
+    <Authors>UmbHost</Authors>
+    <Company>UmbHost</Company>
+    <Description>GitHub connection type, actions, a jsonpath binding filter and an X-Hub-Signature-256 webhook authenticator for Umbraco Automate.</Description>
+    <PackageTags>umbraco;automate;github;umbraco-marketplace</PackageTags>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <RepositoryType>git</RepositoryType>
+
+    <GeneratePackageOnBuild>false</GeneratePackageOnBuild>
+    <IncludeSymbols>true</IncludeSymbols>
+    <SymbolPackageFormat>snupkg</SymbolPackageFormat>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Umbraco.Automate.Core" Version="[17.0.0, 19.0.0)" />
+    <PackageReference Include="Umbraco.Automate.OpenIddict" Version="[17.0.0, 19.0.0)" />
+    <PackageReference Include="Umbraco.Cms.Core" Version="[17.4.0, 19.0.0)" />
+  </ItemGroup>
+
+</Project>

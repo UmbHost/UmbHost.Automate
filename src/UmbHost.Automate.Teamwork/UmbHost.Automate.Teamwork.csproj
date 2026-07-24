@@ -1,0 +1,27 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+
+    <PackageId>UmbHost.Automate.Teamwork</PackageId>
+    <Version>1.0.0</Version>
+    <Authors>UmbHost</Authors>
+    <Company>UmbHost</Company>
+    <Description>Teamwork Projects connection type and actions for Umbraco Automate.</Description>
+    <PackageTags>umbraco;automate;teamwork;umbraco-marketplace</PackageTags>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <RepositoryType>git</RepositoryType>
+
+    <GeneratePackageOnBuild>false</GeneratePackageOnBuild>
+    <IncludeSymbols>true</IncludeSymbols>
+    <SymbolPackageFormat>snupkg</SymbolPackageFormat>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Umbraco.Automate.Core" Version="[17.0.0, 19.0.0)" />
+    <PackageReference Include="Umbraco.Cms.Core" Version="[17.4.0, 19.0.0)" />
+  </ItemGroup>
+
+</Project>

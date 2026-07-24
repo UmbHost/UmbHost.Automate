@@ -1,0 +1,10 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/UmbHost.Automate.GitHub/UmbHost.Automate.GitHub.csproj" />
+    <Project Path="src/UmbHost.Automate.Teamwork/UmbHost.Automate.Teamwork.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/UmbHost.Automate.GitHub.Tests/UmbHost.Automate.GitHub.Tests.csproj" />
+    <Project Path="tests/UmbHost.Automate.Teamwork.Tests/UmbHost.Automate.Teamwork.Tests.csproj" />
+  </Folder>
+</Solution>
