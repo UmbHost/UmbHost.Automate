@@ -6,7 +6,7 @@
     <Nullable>enable</Nullable>
 
     <PackageId>UmbHost.Automate.GitHub</PackageId>
-    <Version>1.0.1</Version>
+    <Version>1.0.2</Version>
     <Authors>UmbHost</Authors>
     <Company>UmbHost</Company>
     <Description>GitHub connection type, actions, a jsonpath binding filter and an X-Hub-Signature-256 webhook authenticator for Umbraco Automate.</Description>
