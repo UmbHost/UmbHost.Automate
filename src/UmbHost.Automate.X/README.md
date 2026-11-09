@@ -8,6 +8,10 @@ Requires Umbraco Automate 17.4+ / 18.4+, `Umbraco.Automate.OpenIddict`, and Umbr
 
 The X API is pay-per-use. Each post is billed, and **a post containing a link is billed at a much higher rate** than a plain one. Check [X's pricing](https://docs.x.com/x-api/getting-started/pricing) before automating link posts.
 
+## Testing status
+
+This package is tested against mocked X API responses only, built from X's published API documentation. It has not been run against the live X API.
+
 ## Setup
 
 1. In the [X developer console](https://developer.x.com), create an app with OAuth 2.0 enabled as a confidential client (Web App).
