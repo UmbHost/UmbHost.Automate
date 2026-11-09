@@ -13,7 +13,7 @@ using UmbHost.Automate.Social;
 namespace UmbHost.Automate.Bluesky.Actions;
 
 /// <summary>
-/// Publishes a post to Bluesky, optionally with one image.
+/// Publishes a post to Bluesky, optionally with one image or, without one, a link card.
 /// </summary>
 /// <remarks>
 /// Bluesky has no idempotency key, so the create request is never retried once it may have reached
@@ -29,6 +29,7 @@ public sealed class CreatePostAction : ActionBase<CreatePostSettings, CreatePost
     private const string Network = "Bluesky";
     private const int MaxGraphemes = 300;
     private const long MaxImageBytes = 2_000_000;
+    private const long MaxThumbBytes = 1_000_000;
 
     private readonly IHttpClientFactory _httpClientFactory;
     private readonly ImageFetcher _imageFetcher;
@@ -41,6 +42,31 @@ public sealed class CreatePostAction : ActionBase<CreatePostSettings, CreatePost
     {
         _httpClientFactory = httpClientFactory;
         _imageFetcher = new ImageFetcher(httpClientFactory, httpClientOptions);
+    }
+
+    private static bool IsHttps(string? url)
+        => Uri.TryCreate(url, UriKind.Absolute, out var uri) && uri.Scheme == Uri.UriSchemeHttps;
+
+    /// <summary>Uploads a link card's thumbnail, or returns null when it can't be fetched or uploaded.</summary>
+    private async Task<JsonNode?> UploadThumbAsync(HttpClient client, string url, CancellationToken cancellationToken)
+    {
+        try
+        {
+            var (image, _) = await _imageFetcher.FetchAsync(url, MaxThumbBytes, cancellationToken);
+            if (image is null)
+            {
+                return null;
+            }
+
+            using var upload = new ByteArrayContent(image.Bytes);
+            upload.Headers.ContentType = new MediaTypeHeaderValue(image.ContentType);
+            using var response = await client.PostAsync("com.atproto.repo.uploadBlob", upload, cancellationToken);
+            return response.IsSuccessStatusCode ? JsonNode.Parse(await response.Content.ReadAsStringAsync(cancellationToken))?["blob"]?.DeepClone() : null;
+        }
+        catch (Exception ex) when (ex is HttpRequestException or JsonException or TaskCanceledException && !cancellationToken.IsCancellationRequested)
+        {
+            return null;
+        }
     }
 
     /// <inheritdoc />
@@ -127,6 +153,25 @@ public sealed class CreatePostAction : ActionBase<CreatePostSettings, CreatePost
                     ["alt"] = settings.ImageAltText ?? string.Empty,
                 }),
             };
+        }
+
+        else if (IsHttps(settings.LinkUrl))
+        {
+            // A link card (Bluesky shows one only when the post carries it). Its thumbnail is a nicety: if it can't be fetched or
+            // uploaded, the card goes without it rather than the post failing.
+            var external = new JsonObject
+            {
+                ["uri"] = settings.LinkUrl,
+                ["title"] = settings.LinkTitle ?? string.Empty,
+                ["description"] = settings.LinkDescription ?? string.Empty,
+            };
+
+            if (IsHttps(settings.LinkImageUrl) && await UploadThumbAsync(client, settings.LinkImageUrl!, cancellationToken) is { } thumb)
+            {
+                external["thumb"] = thumb;
+            }
+
+            record["embed"] = new JsonObject { ["$type"] = "app.bsky.embed.external", ["external"] = external };
         }
 
         string body;

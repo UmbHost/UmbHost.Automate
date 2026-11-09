@@ -101,6 +101,104 @@ public class CreatePostActionTests
         image.GetProperty("image").GetProperty("ref").GetProperty("$link").GetString().Should().Be("bafkblob");
     }
 
+    private static Func<HttpRequestMessage, CancellationToken, Task<HttpResponseMessage>> Capture(Action<string> body)
+        => async (r, _) =>
+        {
+            body(await r.Content!.ReadAsStringAsync());
+            return new HttpResponseMessage(HttpStatusCode.OK) { Content = new StringContent("""{"uri":"at://did:plc:abc/app.bsky.feed.post/3k","cid":"c"}""") };
+        };
+
+    [Fact]
+    public async Task A_link_becomes_a_card_with_its_thumbnail()
+    {
+        var handler = HandlerWithSession();
+        handler.SetupRequest(HttpMethod.Get, "https://umbhost.net/card.jpg")
+               .ReturnsResponse(HttpStatusCode.OK, new ByteArrayContent([1, 2]), configure: r =>
+                   r.Content.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue("image/jpeg"));
+        handler.SetupRequest(HttpMethod.Post, Pds + "com.atproto.repo.uploadBlob")
+               .ReturnsResponse(HttpStatusCode.OK, new StringContent("""{"blob":{"$type":"blob","ref":{"$link":"bafkthumb"},"mimeType":"image/jpeg","size":2}}"""));
+        string? recordBody = null;
+        handler.SetupRequest(HttpMethod.Post, Pds + "com.atproto.repo.createRecord").Returns(Capture(b => recordBody = b));
+
+        var result = await Sut(handler).ExecuteAsync(ActionTestHarness.Context(new CreatePostSettings
+        {
+            Text = "Read https://umbhost.net/blog",
+            LinkUrl = "https://umbhost.net/blog",
+            LinkTitle = "Our blog",
+            LinkDescription = "News from UmbHost",
+            LinkImageUrl = "https://umbhost.net/card.jpg",
+        }, Conn), default);
+
+        result.Status.Should().Be(ActionResultStatus.Success);
+        using var doc = JsonDocument.Parse(recordBody!);
+        var embed = doc.RootElement.GetProperty("record").GetProperty("embed");
+        embed.GetProperty("$type").GetString().Should().Be("app.bsky.embed.external");
+        var external = embed.GetProperty("external");
+        external.GetProperty("uri").GetString().Should().Be("https://umbhost.net/blog");
+        external.GetProperty("title").GetString().Should().Be("Our blog");
+        external.GetProperty("description").GetString().Should().Be("News from UmbHost");
+        external.GetProperty("thumb").GetProperty("ref").GetProperty("$link").GetString().Should().Be("bafkthumb");
+    }
+
+    [Fact]
+    public async Task A_card_still_goes_out_when_its_thumbnail_cannot_be_fetched()
+    {
+        var handler = HandlerWithSession();
+        handler.SetupRequest(HttpMethod.Get, "https://umbhost.net/missing.jpg").ReturnsResponse(HttpStatusCode.NotFound);
+        string? recordBody = null;
+        handler.SetupRequest(HttpMethod.Post, Pds + "com.atproto.repo.createRecord").Returns(Capture(b => recordBody = b));
+
+        var result = await Sut(handler).ExecuteAsync(ActionTestHarness.Context(new CreatePostSettings
+        {
+            Text = "Read https://umbhost.net/blog",
+            LinkUrl = "https://umbhost.net/blog",
+            LinkImageUrl = "https://umbhost.net/missing.jpg",
+        }, Conn), default);
+
+        result.Status.Should().Be(ActionResultStatus.Success);
+        using var doc = JsonDocument.Parse(recordBody!);
+        var external = doc.RootElement.GetProperty("record").GetProperty("embed").GetProperty("external");
+        external.GetProperty("title").GetString().Should().Be("");
+        external.TryGetProperty("thumb", out _).Should().BeFalse();
+    }
+
+    [Fact]
+    public async Task An_image_takes_the_place_of_the_card()
+    {
+        var handler = HandlerWithSession();
+        handler.SetupRequest(HttpMethod.Get, "https://cdn.example.com/pic.png")
+               .ReturnsResponse(HttpStatusCode.OK, new ByteArrayContent([1]), configure: r =>
+                   r.Content.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue("image/png"));
+        handler.SetupRequest(HttpMethod.Post, Pds + "com.atproto.repo.uploadBlob")
+               .ReturnsResponse(HttpStatusCode.OK, new StringContent("""{"blob":{"$type":"blob","ref":{"$link":"bafkimg"},"mimeType":"image/png","size":1}}"""));
+        string? recordBody = null;
+        handler.SetupRequest(HttpMethod.Post, Pds + "com.atproto.repo.createRecord").Returns(Capture(b => recordBody = b));
+
+        await Sut(handler).ExecuteAsync(ActionTestHarness.Context(new CreatePostSettings
+        {
+            Text = "Read https://umbhost.net/blog",
+            ImageUrl = "https://cdn.example.com/pic.png",
+            LinkUrl = "https://umbhost.net/blog",
+            LinkTitle = "Our blog",
+        }, Conn), default);
+
+        using var doc = JsonDocument.Parse(recordBody!);
+        doc.RootElement.GetProperty("record").GetProperty("embed").GetProperty("$type").GetString().Should().Be("app.bsky.embed.images");
+    }
+
+    [Fact]
+    public async Task A_link_that_is_not_https_gets_no_card()
+    {
+        var handler = HandlerWithSession();
+        string? recordBody = null;
+        handler.SetupRequest(HttpMethod.Post, Pds + "com.atproto.repo.createRecord").Returns(Capture(b => recordBody = b));
+
+        await Sut(handler).ExecuteAsync(ActionTestHarness.Context(new CreatePostSettings { Text = "Read", LinkUrl = "javascript:alert(1)", LinkTitle = "x" }, Conn), default);
+
+        using var doc = JsonDocument.Parse(recordBody!);
+        doc.RootElement.GetProperty("record").TryGetProperty("embed", out _).Should().BeFalse();
+    }
+
     [Fact]
     public async Task Rejects_text_over_300_graphemes_without_calling_the_network()
     {

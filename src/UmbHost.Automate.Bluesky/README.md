@@ -23,6 +23,9 @@ Requires Umbraco Automate 17.4+ / 18.4+ and Umbraco CMS 17.6+.
 | Text | Up to 300 characters. URLs in the text are made clickable (Bluesky needs explicit link facets for that). |
 | Image URL | Optional https URL of a JPEG, PNG, GIF or WebP, up to 2 MB. Downloaded through Automate's SSRF-protected client. |
 | Image Alt Text | Describes the image for screen readers. |
+| Link URL | Optional https link shown as a card under the post. A post with an image shows the image instead (Bluesky takes one or the other). |
+| Link Title / Link Description | The card's text. |
+| Link Image URL | Optional https URL of the card's thumbnail, up to 1 MB, downloaded through the same SSRF-protected client. If it can't be fetched, the card is posted without a thumbnail. |
 | Language | Optional, e.g. `en`. |
 
 Output: `uri` (at://), `cid`, `postUrl` (bsky.app link).
