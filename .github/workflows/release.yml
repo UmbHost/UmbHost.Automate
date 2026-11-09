@@ -1,9 +1,9 @@
 name: Release
 
-# Publishes both packages when a version tag is pushed, e.g. `v1.0.0`.
+# Publishes every package when a version tag is pushed, e.g. `v1.0.0`.
 # NuGet.org publishing uses Trusted Publishing (OIDC) — no long-lived API key is stored.
 # One-time setup on nuget.org: create a Trusted Publishing policy for each package id
-# (UmbHost.Automate.Teamwork, UmbHost.Automate.GitHub) bound to this repository and the
+# (UmbHost.Automate.Teamwork, .GitHub, .Bluesky, .Mastodon, .LinkedIn, .X, .Meta) bound to this repository and the
 # `release.yml` workflow. See https://learn.microsoft.com/nuget/nuget-org/trusted-publishing
 on:
   push:

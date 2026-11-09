@@ -1,0 +1,24 @@
+{
+  "$schema": "https://marketplace.umbraco.com/umbraco-marketplace-schema.json",
+  "AuthorDetails": {
+    "Name": "UmbHost",
+    "Description": "UmbHost — Umbraco specialist hosting",
+    "Url": "https://umbhost.net",
+    "ImageUrl": "https://github.com/UmbHost.png"
+  },
+  "Category": "Automation",
+  "Description": "Mastodon connection and a Create Status action for Umbraco Automate: publish statuses with an image to any Mastodon instance, safely retried via an idempotency key.",
+  "LicenseTypes": ["Free"],
+  "IssueTrackerUrl": "https://github.com/UmbHost/UmbHost.Automate/issues",
+  "DocumentationUrl": "https://github.com/UmbHost/UmbHost.Automate/tree/main/src/UmbHost.Automate.Mastodon",
+  "PackageType": "Package",
+  "Title": "UmbHost.Automate.Mastodon",
+  "Tags": ["umbraco", "automate", "automation", "social", "mastodon"],
+  "RelatedPackages": [
+    {
+      "PackageId": "Umbraco.Automate",
+      "Description": "Core automation system for Umbraco CMS"
+    }
+  ],
+  "LookingForContributors": true
+}

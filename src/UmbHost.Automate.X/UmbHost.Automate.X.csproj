@@ -26,7 +26,7 @@
        which image downloads go through (see Shared/ImageFetcher.cs). It needs Umbraco CMS 17.6+, hence the CMS floor. -->
   <ItemGroup>
     <PackageReference Include="Umbraco.Automate.Core" Version="[17.4.0, 19.0.0)" />
-    <PackageReference Include="Umbraco.Automate.OpenIddict" Version="[17.4.0, 19.0.0)" />
+    <PackageReference Include="Umbraco.Automate.OpenIddict" Version="[17.0.0, 19.0.0)" />
     <PackageReference Include="Umbraco.Cms.Core" Version="[17.6.0, 19.0.0)" />
   </ItemGroup>
 
