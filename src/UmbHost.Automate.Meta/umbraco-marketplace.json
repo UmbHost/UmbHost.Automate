@@ -8,6 +8,7 @@
   },
   "Category": "Automation",
   "Description": "Facebook & Instagram connection and actions for Umbraco Automate: publish to a Facebook Page and its linked Instagram account.",
+  "ImageUrl": "https://github.com/UmbHost/UmbHost.Automate/blob/main/umbHostAutomateMeta.png",
   "LicenseTypes": ["Free"],
   "IssueTrackerUrl": "https://github.com/UmbHost/UmbHost.Automate/issues",
   "DocumentationUrl": "https://github.com/UmbHost/UmbHost.Automate/tree/main/src/UmbHost.Automate.Meta",

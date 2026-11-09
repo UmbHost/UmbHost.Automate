@@ -8,6 +8,7 @@
   },
   "Category": "Automation",
   "Description": "X (Twitter) connection (OAuth 2.0) and a Create Post action for Umbraco Automate: publish posts with an image and alt text.",
+  "ImageUrl": "https://github.com/UmbHost/UmbHost.Automate/blob/main/umbHostAutomateX.png",
   "LicenseTypes": ["Free"],
   "IssueTrackerUrl": "https://github.com/UmbHost/UmbHost.Automate/issues",
   "DocumentationUrl": "https://github.com/UmbHost/UmbHost.Automate/tree/main/src/UmbHost.Automate.X",

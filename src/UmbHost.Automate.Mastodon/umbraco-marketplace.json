@@ -8,6 +8,7 @@
   },
   "Category": "Automation",
   "Description": "Mastodon connection and a Create Status action for Umbraco Automate: publish statuses with an image to any Mastodon instance, safely retried via an idempotency key.",
+  "ImageUrl": "https://github.com/UmbHost/UmbHost.Automate/blob/main/umbHostAutomateMastodon.png",
   "LicenseTypes": ["Free"],
   "IssueTrackerUrl": "https://github.com/UmbHost/UmbHost.Automate/issues",
   "DocumentationUrl": "https://github.com/UmbHost/UmbHost.Automate/tree/main/src/UmbHost.Automate.Mastodon",

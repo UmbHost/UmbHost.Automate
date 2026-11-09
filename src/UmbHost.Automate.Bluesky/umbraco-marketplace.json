@@ -8,6 +8,7 @@
   },
   "Category": "Automation",
   "Description": "Bluesky connection and a Create Post action for Umbraco Automate: publish posts with clickable links and an image as part of an automation.",
+  "ImageUrl": "https://github.com/UmbHost/UmbHost.Automate/blob/main/umbHostAutomateBluesky.png",
   "LicenseTypes": ["Free"],
   "IssueTrackerUrl": "https://github.com/UmbHost/UmbHost.Automate/issues",
   "DocumentationUrl": "https://github.com/UmbHost/UmbHost.Automate/tree/main/src/UmbHost.Automate.Bluesky",

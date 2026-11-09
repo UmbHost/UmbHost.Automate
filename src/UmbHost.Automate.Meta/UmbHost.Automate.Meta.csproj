@@ -15,6 +15,7 @@
     <PackageProjectUrl>https://github.com/UmbHost/UmbHost.Automate</PackageProjectUrl>
     <RepositoryUrl>https://github.com/UmbHost/UmbHost.Automate</RepositoryUrl>
     <RepositoryType>git</RepositoryType>
+    <PackageIcon>umbHostAutomateMeta.png</PackageIcon>
     <PackageReadmeFile>README.md</PackageReadmeFile>
 
     <GeneratePackageOnBuild>false</GeneratePackageOnBuild>
@@ -37,6 +38,7 @@
   <ItemGroup>
     <None Include="README.md" Pack="true" PackagePath="\" />
     <None Include="umbraco-marketplace.json" Pack="true" PackagePath="\" />
+    <None Include="..\..\umbHostAutomateMeta.png" Pack="true" PackagePath="\" />
     <None Include="..\..\LICENSE" Pack="true" PackagePath="\" />
   </ItemGroup>
 

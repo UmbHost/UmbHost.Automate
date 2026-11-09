@@ -8,6 +8,7 @@
   },
   "Category": "Automation",
   "Description": "LinkedIn connection (OAuth) and a Create Company Post action for Umbraco Automate: publish to a LinkedIn company page with a link card or image.",
+  "ImageUrl": "https://github.com/UmbHost/UmbHost.Automate/blob/main/umbHostAutomateLinkedIn.png",
   "LicenseTypes": ["Free"],
   "IssueTrackerUrl": "https://github.com/UmbHost/UmbHost.Automate/issues",
   "DocumentationUrl": "https://github.com/UmbHost/UmbHost.Automate/tree/main/src/UmbHost.Automate.LinkedIn",
