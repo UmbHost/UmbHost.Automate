@@ -1,0 +1,43 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+
+    <PackageId>UmbHost.Automate.Mastodon</PackageId>
+    <Version>1.0.0</Version>
+    <Authors>UmbHost</Authors>
+    <Company>UmbHost</Company>
+    <Description>Mastodon connection type and a Create Status action for Umbraco Automate.</Description>
+    <PackageTags>umbraco;automate;social;mastodon;umbraco-marketplace</PackageTags>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <PackageProjectUrl>https://github.com/UmbHost/UmbHost.Automate</PackageProjectUrl>
+    <RepositoryUrl>https://github.com/UmbHost/UmbHost.Automate</RepositoryUrl>
+    <RepositoryType>git</RepositoryType>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+
+    <GeneratePackageOnBuild>false</GeneratePackageOnBuild>
+    <IncludeSymbols>true</IncludeSymbols>
+    <SymbolPackageFormat>snupkg</SymbolPackageFormat>
+  </PropertyGroup>
+
+  <!-- 17.4.0 is the first Automate release that registers its SSRF-protected outbound HTTP client,
+       which image downloads go through (see Shared/ImageFetcher.cs). It needs Umbraco CMS 17.6+, hence the CMS floor. -->
+  <ItemGroup>
+    <PackageReference Include="Umbraco.Automate.Core" Version="[17.4.0, 19.0.0)" />
+    <PackageReference Include="Umbraco.Cms.Core" Version="[17.6.0, 19.0.0)" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Compile Include="..\Shared\*.cs" LinkBase="Shared" />
+    <InternalsVisibleTo Include="UmbHost.Automate.Mastodon.Tests" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Include="README.md" Pack="true" PackagePath="\" />
+    <None Include="umbraco-marketplace.json" Pack="true" PackagePath="\" />
+    <None Include="..\..\LICENSE" Pack="true" PackagePath="\" />
+  </ItemGroup>
+
+</Project>

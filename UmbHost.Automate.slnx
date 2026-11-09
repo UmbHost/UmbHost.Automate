@@ -1,10 +1,20 @@
 <Solution>
   <Folder Name="/src/">
+    <Project Path="src/UmbHost.Automate.Bluesky/UmbHost.Automate.Bluesky.csproj" />
     <Project Path="src/UmbHost.Automate.GitHub/UmbHost.Automate.GitHub.csproj" />
+    <Project Path="src/UmbHost.Automate.LinkedIn/UmbHost.Automate.LinkedIn.csproj" />
+    <Project Path="src/UmbHost.Automate.Mastodon/UmbHost.Automate.Mastodon.csproj" />
+    <Project Path="src/UmbHost.Automate.Meta/UmbHost.Automate.Meta.csproj" />
     <Project Path="src/UmbHost.Automate.Teamwork/UmbHost.Automate.Teamwork.csproj" />
+    <Project Path="src/UmbHost.Automate.X/UmbHost.Automate.X.csproj" />
   </Folder>
   <Folder Name="/tests/">
+    <Project Path="tests/UmbHost.Automate.Bluesky.Tests/UmbHost.Automate.Bluesky.Tests.csproj" />
     <Project Path="tests/UmbHost.Automate.GitHub.Tests/UmbHost.Automate.GitHub.Tests.csproj" />
+    <Project Path="tests/UmbHost.Automate.LinkedIn.Tests/UmbHost.Automate.LinkedIn.Tests.csproj" />
+    <Project Path="tests/UmbHost.Automate.Mastodon.Tests/UmbHost.Automate.Mastodon.Tests.csproj" />
+    <Project Path="tests/UmbHost.Automate.Meta.Tests/UmbHost.Automate.Meta.Tests.csproj" />
     <Project Path="tests/UmbHost.Automate.Teamwork.Tests/UmbHost.Automate.Teamwork.Tests.csproj" />
+    <Project Path="tests/UmbHost.Automate.X.Tests/UmbHost.Automate.X.Tests.csproj" />
   </Folder>
 </Solution>
