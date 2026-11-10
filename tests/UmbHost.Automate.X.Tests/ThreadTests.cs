@@ -23,7 +23,7 @@ public class ThreadTests
         return new CreatePostAction(ActionTestHarness.Infrastructure, handler.CreateClientFactory(), SocialTestHarness.Options(), credentials.Object);
     }
 
-    private static Mock<HttpMessageHandler> Serve(List<JsonElement> bodies, int? failOn = null)
+    private static Mock<HttpMessageHandler> Serve(List<JsonElement> bodies, int? failOn = null, HttpStatusCode failStatus = HttpStatusCode.BadRequest)
     {
         var handler = new Mock<HttpMessageHandler>();
         var n = 0;
@@ -32,7 +32,7 @@ public class ThreadTests
             bodies.Add(JsonDocument.Parse(await r.Content!.ReadAsStringAsync()).RootElement.Clone());
             n++;
             return n == failOn
-                ? new HttpResponseMessage(HttpStatusCode.BadRequest) { Content = new StringContent("""{"title":"Invalid Request"}""") }
+                ? new HttpResponseMessage(failStatus) { Content = new StringContent("""{"title":"Invalid Request"}""") }
                 : new HttpResponseMessage(HttpStatusCode.Created) { Content = new StringContent($$$"""{"data":{"id":"{{{100 + n}}}","text":"x"}}""") };
         });
         return handler;
@@ -66,8 +66,23 @@ public class ThreadTests
 
         result.Status.Should().Be(ActionResultStatus.Failed);
         result.ErrorCategory.Should().Be(StepRunErrorCategory.ConfigurationError);
-        result.Exception!.Message.Should().Contain("part 2 of 3").And.Contain("https://x.com/i/web/status/101");
+        result.Exception!.Message.Should().Contain("part 2 of 3").And.Contain("https://x.com/i/web/status/101").And.Contain("could not be posted");
+        result.Exception.Message.Split('\n')[^1].Should().Be(
+            """UMBSOCIAL-THREAD {"failedPart":2,"total":3,"posted":["https://x.com/i/web/status/101"],"failedPartUnknown":false}""");
         bodies.Should().HaveCount(2);
+    }
+
+    [Fact]
+    public async Task An_unconfirmed_part_may_be_live_and_is_flagged_unknown()
+    {
+        var bodies = new List<JsonElement>();
+
+        var result = await Sut(Serve(bodies, failOn: 2, failStatus: HttpStatusCode.BadGateway)).ExecuteAsync(ActionTestHarness.Context(
+            new CreatePostSettings { Text = "One", ThreadParts = """["Two"]""" }, Conn), default);
+
+        result.ErrorCategory.Should().Be(StepRunErrorCategory.ConfigurationError);
+        result.Exception!.Message.Should().Contain("may also have been published").And.Contain("Check the account before re-posting it");
+        result.Exception.Message.Split('\n')[^1].Should().EndWith("\"failedPartUnknown\":true}");
     }
 
     [Fact]
@@ -78,6 +93,6 @@ public class ThreadTests
         var result = await Sut(Serve(bodies)).ExecuteAsync(ActionTestHarness.Context(new CreatePostSettings { Text = "Hi" }, Conn), default);
 
         result.Status.Should().Be(ActionResultStatus.Success);
-        bodies.Single().TryGetProperty("reply", out _).Should().BeFalse();
+        bodies.Single().GetRawText().Should().Be("""{"text":"Hi"}""");
     }
 }

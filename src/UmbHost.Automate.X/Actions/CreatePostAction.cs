@@ -97,7 +97,7 @@ public sealed class CreatePostAction : ActionBase<CreatePostSettings, CreatePost
             post["media"] = new JsonObject { ["media_ids"] = new JsonArray(mediaId) };
         }
 
-        var (firstId, firstFailure, _) = await SendAsync(client, post, cancellationToken);
+        var (firstId, firstFailure, _, _) = await SendAsync(client, post, cancellationToken);
         if (firstId is null)
         {
             return firstFailure!;
@@ -113,10 +113,10 @@ public sealed class CreatePostAction : ActionBase<CreatePostSettings, CreatePost
                 ["reply"] = new JsonObject { ["in_reply_to_tweet_id"] = previousId },
             };
 
-            var (id, _, detail) = await SendAsync(client, part, cancellationToken);
+            var (id, _, detail, unknown) = await SendAsync(client, part, cancellationToken);
             if (id is null)
             {
-                return ThreadParts.PartFailed(Network, i + 2, threadParts.Count + 1, urls, detail!);
+                return ThreadParts.PartFailed(Network, i + 2, threadParts.Count + 1, urls, detail!, unknown);
             }
 
             urls.Add(UrlOf(id));
@@ -130,7 +130,7 @@ public sealed class CreatePostAction : ActionBase<CreatePostSettings, CreatePost
     private static string UrlOf(string id) => id.Length > 0 ? $"https://x.com/i/web/status/{id}" : string.Empty;
 
     /// <summary>Creates one post. On failure returns the step failure (first post) and a plain detail (later parts).</summary>
-    private static async Task<(string? Id, ActionResult? Failure, string? Detail)> SendAsync(
+    private static async Task<(string? Id, ActionResult? Failure, string? Detail, bool Unknown)> SendAsync(
         HttpClient client, JsonObject post, CancellationToken cancellationToken)
     {
         string body;
@@ -140,19 +140,19 @@ public sealed class CreatePostAction : ActionBase<CreatePostSettings, CreatePost
             body = await response.Content.ReadAsStringAsync(cancellationToken);
             if (!response.IsSuccessStatusCode)
             {
-                return (null, PostOutcome.FromResponse(Network, response.StatusCode, body, idempotent: false), $"{Network} returned {(int)response.StatusCode}: {body}");
+                return (null, PostOutcome.FromResponse(Network, response.StatusCode, body, idempotent: false), $"{Network} returned {(int)response.StatusCode}: {body}", ThreadParts.IsAmbiguous(response.StatusCode));
             }
         }
         catch (Exception ex)
         {
-            return (null, PostOutcome.FromException(Network, ex, idempotent: false), ex.Message);
+            return (null, PostOutcome.FromException(Network, ex, idempotent: false), ex.Message, true);
         }
 
         using var doc = JsonDocument.Parse(body);
         var id = doc.RootElement.TryGetProperty("data", out var data) && data.TryGetProperty("id", out var i)
             ? i.GetString() ?? string.Empty
             : string.Empty;
-        return (id, null, null);
+        return (id, null, null, false);
     }
 
     private async Task<(string? MediaId, ActionResult? Failure)> UploadImageAsync(

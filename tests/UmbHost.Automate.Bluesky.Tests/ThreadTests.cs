@@ -14,7 +14,7 @@ public class ThreadTests
     private const string Pds = "https://bsky.social/xrpc/";
     private static readonly BlueskyConnectionSettings Conn = new() { ServiceUrl = "https://bsky.social", Identifier = "umbhost.net", AppPassword = "p" };
 
-    private static Mock<HttpMessageHandler> Serve(List<JsonElement> records, int? failOn = null)
+    private static Mock<HttpMessageHandler> Serve(List<JsonElement> records, int? failOn = null, HttpStatusCode failStatus = HttpStatusCode.BadRequest, List<string>? requests = null)
     {
         var handler = new Mock<HttpMessageHandler>();
         handler.SetupRequest(HttpMethod.Post, Pds + "com.atproto.server.createSession")
@@ -23,10 +23,12 @@ public class ThreadTests
         var n = 0;
         handler.SetupRequest(HttpMethod.Post, Pds + "com.atproto.repo.createRecord").Returns(async (HttpRequestMessage r, CancellationToken _) =>
         {
-            records.Add(JsonDocument.Parse(await r.Content!.ReadAsStringAsync()).RootElement.GetProperty("record").Clone());
+            var raw = await r.Content!.ReadAsStringAsync();
+            requests?.Add(raw);
+            records.Add(JsonDocument.Parse(raw).RootElement.GetProperty("record").Clone());
             n++;
             return n == failOn
-                ? new HttpResponseMessage(HttpStatusCode.BadRequest) { Content = new StringContent("""{"error":"InvalidRequest"}""") }
+                ? new HttpResponseMessage(failStatus) { Content = new StringContent("""{"error":"InvalidRequest"}""") }
                 : new HttpResponseMessage(HttpStatusCode.OK) { Content = new StringContent($$"""{"uri":"at://did:plc:abc/app.bsky.feed.post/k{{n}}","cid":"cid{{n}}"}""") };
         });
         return handler;
@@ -70,8 +72,23 @@ public class ThreadTests
 
         result.Status.Should().Be(ActionResultStatus.Failed);
         result.ErrorCategory.Should().Be(StepRunErrorCategory.ConfigurationError);
-        result.Exception!.Message.Should().Contain("part 2 of 3").And.Contain("https://bsky.app/profile/umbhost.net/post/k1");
+        result.Exception!.Message.Should().Contain("part 2 of 3").And.Contain("https://bsky.app/profile/umbhost.net/post/k1").And.Contain("could not be posted");
+        result.Exception.Message.Split('\n')[^1].Should().Be(
+            """UMBSOCIAL-THREAD {"failedPart":2,"total":3,"posted":["https://bsky.app/profile/umbhost.net/post/k1"],"failedPartUnknown":false}""");
         records.Should().HaveCount(2);
+    }
+
+    [Fact]
+    public async Task An_unconfirmed_part_may_be_live_and_is_flagged_unknown()
+    {
+        var records = new List<JsonElement>();
+
+        var result = await Sut(Serve(records, failOn: 2, failStatus: HttpStatusCode.BadGateway)).ExecuteAsync(ActionTestHarness.Context(
+            new CreatePostSettings { Text = "One", ThreadParts = """["Two"]""" }, Conn), default);
+
+        result.ErrorCategory.Should().Be(StepRunErrorCategory.ConfigurationError);
+        result.Exception!.Message.Should().Contain("may also have been published").And.Contain("Check the account before re-posting it");
+        result.Exception.Message.Split('\n')[^1].Should().EndWith("\"failedPartUnknown\":true}");
     }
 
     [Fact]
@@ -91,10 +108,12 @@ public class ThreadTests
     public async Task Without_the_new_inputs_nothing_changes()
     {
         var records = new List<JsonElement>();
+        var requests = new List<string>();
 
-        var result = await Sut(Serve(records)).ExecuteAsync(ActionTestHarness.Context(new CreatePostSettings { Text = "Hi" }, Conn), default);
+        var result = await Sut(Serve(records, requests: requests)).ExecuteAsync(ActionTestHarness.Context(new CreatePostSettings { Text = "Hi" }, Conn), default);
 
         result.Status.Should().Be(ActionResultStatus.Success);
-        records.Single().TryGetProperty("reply", out _).Should().BeFalse();
+        System.Text.RegularExpressions.Regex.Replace(requests.Single(), "\"createdAt\":\"[^\"]+\"", "\"createdAt\":\"T\"").Should().Be(
+            """{"repo":"did:plc:abc","collection":"app.bsky.feed.post","record":{"$type":"app.bsky.feed.post","text":"Hi","createdAt":"T"}}""");
     }
 }

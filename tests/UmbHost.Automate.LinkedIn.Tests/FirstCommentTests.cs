@@ -24,14 +24,15 @@ public class FirstCommentTests
             ActionTestHarness.Infrastructure, handler.CreateClientFactory(), SocialTestHarness.Options(), credentials.Object);
     }
 
-    private static Mock<HttpMessageHandler> PostCreated()
+    private static Mock<HttpMessageHandler> PostCreated(List<string>? bodies = null)
     {
         var handler = new Mock<HttpMessageHandler>();
-        handler.SetupRequest(HttpMethod.Post, Rest + "posts").Returns(() =>
+        handler.SetupRequest(HttpMethod.Post, Rest + "posts").Returns(async (HttpRequestMessage r, CancellationToken _) =>
         {
+            bodies?.Add(await r.Content!.ReadAsStringAsync());
             var response = new HttpResponseMessage(HttpStatusCode.Created);
             response.Headers.Add("x-restli-id", "urn:li:share:7001");
-            return Task.FromResult(response);
+            return response;
         });
         return handler;
     }
@@ -77,15 +78,32 @@ public class FirstCommentTests
         result.Status.Should().Be(ActionResultStatus.Success);
         var output = result.OutputData.Should().BeOfType<CreateOrganizationPostOutput>().Subject;
         output.PostUrl.Should().Be("https://www.linkedin.com/feed/update/urn:li:share:7001/");
-        output.Warning.Should().Contain("first comment").And.Contain("403");
+        output.Warning.Should().Contain("first comment could not be added").And.Contain("403");
+    }
+
+    [Fact]
+    public async Task Linkedin_unconfirmed_comment_says_it_may_not_have_been_added()
+    {
+        var handler = PostCreated();
+        handler.SetupRequest(HttpMethod.Post, Rest + "socialActions/urn%3Ali%3Ashare%3A7001/comments")
+               .ReturnsResponse(HttpStatusCode.BadGateway, new StringContent("oops"));
+
+        var result = await Sut(handler).ExecuteAsync(ActionTestHarness.Context(Settings("c"), Conn), default);
+
+        result.Status.Should().Be(ActionResultStatus.Success);
+        result.OutputData.Should().BeOfType<CreateOrganizationPostOutput>().Which.Warning.Should().Contain("may not have been added");
     }
 
     [Fact]
     public async Task Without_the_new_inputs_nothing_changes()
     {
-        var handler = PostCreated();
+        var bodies = new List<string>();
+        var handler = PostCreated(bodies);
 
         var result = await Sut(handler).ExecuteAsync(ActionTestHarness.Context(Settings(null), Conn), default);
+
+        bodies.Single().Should().Be(
+            """{"author":"urn:li:organization:2414183","commentary":"Hello","visibility":"PUBLIC","distribution":{"feedDistribution":"MAIN_FEED","targetEntities":[],"thirdPartyDistributionChannels":[]},"lifecycleState":"PUBLISHED","isReshareDisabledByAuthor":false}""");
 
         result.Status.Should().Be(ActionResultStatus.Success);
         result.OutputData.Should().BeOfType<CreateOrganizationPostOutput>().Which.Warning.Should().BeNull();

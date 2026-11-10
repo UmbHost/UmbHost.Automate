@@ -189,11 +189,12 @@ public sealed class CreateOrganizationPostAction : ActionBase<CreateOrganization
             }
 
             var body = await response.Content.ReadAsStringAsync(cancellationToken);
-            return $"The post was published but the first comment could not be added: LinkedIn returned {(int)response.StatusCode}: {(body.Length <= 300 ? body : body[..300] + "…")}";
+            var outcome = ThreadParts.IsAmbiguous(response.StatusCode) ? "may not have been added" : "could not be added";
+            return $"The post was published but the first comment {outcome}: LinkedIn returned {(int)response.StatusCode}: {(body.Length <= 300 ? body : body[..300] + "…")}";
         }
         catch (Exception ex) when (ex is not OperationCanceledException || !cancellationToken.IsCancellationRequested)
         {
-            return $"The post was published but the first comment could not be added: {ex.Message}";
+            return $"The post was published but the first comment may not have been added: {ex.Message}";
         }
     }
 

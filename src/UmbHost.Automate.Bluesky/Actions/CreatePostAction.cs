@@ -164,7 +164,7 @@ public sealed class CreatePostAction : ActionBase<CreatePostSettings, CreatePost
             record["embed"] = new JsonObject { ["$type"] = "app.bsky.embed.external", ["external"] = external };
         }
 
-        var (first, firstFailure, _) = await CreateRecordAsync(client, session, record, cancellationToken);
+        var (first, firstFailure, _, _) = await CreateRecordAsync(client, session, record, cancellationToken);
         if (first is null)
         {
             return firstFailure!;
@@ -182,10 +182,10 @@ public sealed class CreatePostAction : ActionBase<CreatePostSettings, CreatePost
                 ["parent"] = new JsonObject { ["uri"] = parent.Uri, ["cid"] = parent.Cid },
             };
 
-            var (posted, _, detail) = await CreateRecordAsync(client, session, part, cancellationToken);
+            var (posted, _, detail, unknown) = await CreateRecordAsync(client, session, part, cancellationToken);
             if (posted is null)
             {
-                return ThreadParts.PartFailed(Network, i + 2, threadParts.Count + 1, urls, detail!);
+                return ThreadParts.PartFailed(Network, i + 2, threadParts.Count + 1, urls, detail!, unknown);
             }
 
             urls.Add(posted.Url);
@@ -229,7 +229,7 @@ public sealed class CreatePostAction : ActionBase<CreatePostSettings, CreatePost
     }
 
     /// <summary>Creates one post record. On failure returns the step failure (first post) and a plain detail (later parts).</summary>
-    private static async Task<(Created? Created, ActionResult? Failure, string? Detail)> CreateRecordAsync(
+    private static async Task<(Created? Created, ActionResult? Failure, string? Detail, bool Unknown)> CreateRecordAsync(
         HttpClient client, BlueskySession session, JsonObject record, CancellationToken cancellationToken)
     {
         string body;
@@ -242,18 +242,18 @@ public sealed class CreatePostAction : ActionBase<CreatePostSettings, CreatePost
             body = await response.Content.ReadAsStringAsync(cancellationToken);
             if (!response.IsSuccessStatusCode)
             {
-                return (null, PostOutcome.FromResponse(Network, response.StatusCode, body, idempotent: false), $"{Network} returned {(int)response.StatusCode}: {body}");
+                return (null, PostOutcome.FromResponse(Network, response.StatusCode, body, idempotent: false), $"{Network} returned {(int)response.StatusCode}: {body}", ThreadParts.IsAmbiguous(response.StatusCode));
             }
         }
         catch (Exception ex)
         {
-            return (null, PostOutcome.FromException(Network, ex, idempotent: false), ex.Message);
+            return (null, PostOutcome.FromException(Network, ex, idempotent: false), ex.Message, true);
         }
 
         using var doc = JsonDocument.Parse(body);
         var uri = doc.RootElement.TryGetProperty("uri", out var u) ? u.GetString() ?? string.Empty : string.Empty;
         var cid = doc.RootElement.TryGetProperty("cid", out var c) ? c.GetString() ?? string.Empty : string.Empty;
         var rkey = uri[(uri.LastIndexOf('/') + 1)..];
-        return (new Created(uri, cid, $"https://bsky.app/profile/{session.Handle}/post/{rkey}"), null, null);
+        return (new Created(uri, cid, $"https://bsky.app/profile/{session.Handle}/post/{rkey}"), null, null, false);
     }
 }

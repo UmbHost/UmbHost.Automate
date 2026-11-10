@@ -22,7 +22,7 @@ public sealed class CreateStatusSettings
     [Field(Label = "Language", Description = "Optional ISO 639-1 language code, e.g. en.", SortOrder = 4)]
     public string? Language { get; set; }
 
-    [Field(Label = "Content Warning", Description = "Optional content warning (spoiler text); the status is hidden behind it. On a thread it applies to the first status only.", SortOrder = 5, SupportsBindings = true)]
+    [Field(Label = "Content Warning", Description = "Optional content warning (spoiler text); the status is hidden behind it. On a thread it is repeated on every status, so the whole thread stays behind it.", SortOrder = 5, SupportsBindings = true)]
     public string? ContentWarning { get; set; }
 
     [Field(Label = "Thread Parts", Description = "Optional JSON array of further statuses, e.g. [\"Second\",\"Third\"] (max 10). Each is posted as a reply to the one before, with the same visibility.", SortOrder = 6, SupportsBindings = true)]

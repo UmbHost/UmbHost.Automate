@@ -106,7 +106,7 @@ public sealed class CreateStatusAction : ActionBase<CreateStatusSettings, Create
             status["media_ids"] = new[] { mediaId! };
         }
 
-        var (first, firstFailure, _) = await SendAsync(client, status, $"{context.RunId}:{context.StepId}", cancellationToken);
+        var (first, firstFailure, _, _) = await SendAsync(client, status, $"{context.RunId}:{context.StepId}", cancellationToken);
         if (first is null)
         {
             return firstFailure!;
@@ -122,16 +122,21 @@ public sealed class CreateStatusAction : ActionBase<CreateStatusSettings, Create
                 ["visibility"] = visibility,
                 ["in_reply_to_id"] = previousId,
             };
+            if (!string.IsNullOrWhiteSpace(settings.ContentWarning))
+            {
+                part["spoiler_text"] = settings.ContentWarning;
+            }
+
             if (!string.IsNullOrWhiteSpace(settings.Language))
             {
                 part["language"] = settings.Language;
             }
 
             // Each part has its own key, so a retry can't post a part twice; a failed part is still never retried.
-            var (posted, _, detail) = await SendAsync(client, part, $"{context.RunId}:{context.StepId}:{i + 1}", cancellationToken);
+            var (posted, _, detail, unknown) = await SendAsync(client, part, $"{context.RunId}:{context.StepId}:{i + 1}", cancellationToken);
             if (posted is null)
             {
-                return ThreadParts.PartFailed(Network, i + 2, threadParts.Count + 1, urls, detail!);
+                return ThreadParts.PartFailed(Network, i + 2, threadParts.Count + 1, urls, detail!, unknown);
             }
 
             urls.Add(posted.Url);
@@ -144,7 +149,7 @@ public sealed class CreateStatusAction : ActionBase<CreateStatusSettings, Create
     private sealed record Posted(string Id, string Url);
 
     /// <summary>Posts one status. On failure returns the step failure (for the first status) and a plain detail (for a later part).</summary>
-    private static async Task<(Posted? Posted, ActionResult? Failure, string? Detail)> SendAsync(
+    private static async Task<(Posted? Posted, ActionResult? Failure, string? Detail, bool Unknown)> SendAsync(
         HttpClient client, Dictionary<string, object> status, string idempotencyKey, CancellationToken cancellationToken)
     {
         string body;
@@ -159,18 +164,18 @@ public sealed class CreateStatusAction : ActionBase<CreateStatusSettings, Create
             body = await response.Content.ReadAsStringAsync(cancellationToken);
             if (!response.IsSuccessStatusCode)
             {
-                return (null, PostOutcome.FromResponse(Network, response.StatusCode, body, idempotent: true), $"{Network} returned {(int)response.StatusCode}: {body}");
+                return (null, PostOutcome.FromResponse(Network, response.StatusCode, body, idempotent: true), $"{Network} returned {(int)response.StatusCode}: {body}", ThreadParts.IsAmbiguous(response.StatusCode));
             }
         }
         catch (Exception ex)
         {
-            return (null, PostOutcome.FromException(Network, ex, idempotent: true), ex.Message);
+            return (null, PostOutcome.FromException(Network, ex, idempotent: true), ex.Message, true);
         }
 
         using var doc = JsonDocument.Parse(body);
         return (new Posted(
             doc.RootElement.TryGetProperty("id", out var id) ? id.GetString() ?? string.Empty : string.Empty,
-            doc.RootElement.TryGetProperty("url", out var url) ? url.GetString() ?? string.Empty : string.Empty), null, null);
+            doc.RootElement.TryGetProperty("url", out var url) ? url.GetString() ?? string.Empty : string.Empty), null, null, false);
     }
 
     private async Task<(string? MediaId, ActionResult? Failure)> UploadImageAsync(

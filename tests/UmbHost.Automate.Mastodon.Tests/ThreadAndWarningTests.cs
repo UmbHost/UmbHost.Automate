@@ -18,7 +18,7 @@ public class ThreadAndWarningTests
         => new(ActionTestHarness.Infrastructure, handler.CreateClientFactory(), SocialTestHarness.Options());
 
     /// <summary>Answers each status post in turn with ids 1, 2, ... (or a failure for one number) and records the bodies.</summary>
-    private static Mock<HttpMessageHandler> Serve(List<JsonElement> bodies, int? failOn = null)
+    private static Mock<HttpMessageHandler> Serve(List<JsonElement> bodies, int? failOn = null, HttpStatusCode failStatus = HttpStatusCode.UnprocessableEntity)
     {
         var handler = new Mock<HttpMessageHandler>();
         var n = 0;
@@ -27,7 +27,7 @@ public class ThreadAndWarningTests
             bodies.Add(JsonDocument.Parse(await r.Content!.ReadAsStringAsync()).RootElement.Clone());
             n++;
             return n == failOn
-                ? new HttpResponseMessage(HttpStatusCode.UnprocessableEntity) { Content = new StringContent("""{"error":"bad"}""") }
+                ? new HttpResponseMessage(failStatus) { Content = new StringContent("""{"error":"bad"}""") }
                 : new HttpResponseMessage(HttpStatusCode.OK) { Content = new StringContent($$"""{"id":"{{n}}","url":"https://mastodon.social/@u/{{n}}"}""") };
         });
         return handler;
@@ -69,7 +69,7 @@ public class ThreadAndWarningTests
         bodies.Select(b => b.GetProperty("visibility").GetString()).Should().AllBe("unlisted");
         bodies.Select(b => b.GetProperty("status").GetString()).Should().Equal("One", "Two", "Three");
         bodies[0].GetProperty("spoiler_text").GetString().Should().Be("cw");
-        bodies[1].TryGetProperty("spoiler_text", out _).Should().BeFalse();
+        bodies.Select(b => b.GetProperty("spoiler_text").GetString()).Should().AllBe("cw");
     }
 
     [Fact]
@@ -86,8 +86,34 @@ public class ThreadAndWarningTests
         result.Status.Should().Be(ActionResultStatus.Failed);
         result.ErrorCategory.Should().Be(StepRunErrorCategory.ConfigurationError);
         result.Exception!.Message.Should().Contain("part 3 of 4")
-            .And.Contain("https://mastodon.social/@u/1").And.Contain("https://mastodon.social/@u/2");
+            .And.Contain("https://mastodon.social/@u/1").And.Contain("https://mastodon.social/@u/2").And.Contain("could not be posted");
+        result.Exception.Message.Split('\n')[^1].Should().Be(
+            """UMBSOCIAL-THREAD {"failedPart":3,"total":4,"posted":["https://mastodon.social/@u/1","https://mastodon.social/@u/2"],"failedPartUnknown":false}""");
         bodies.Should().HaveCount(3);
+    }
+
+    [Fact]
+    public async Task An_unconfirmed_part_may_be_live_and_is_flagged_unknown()
+    {
+        var bodies = new List<JsonElement>();
+
+        var result = await Sut(Serve(bodies, failOn: 2, failStatus: HttpStatusCode.BadGateway)).ExecuteAsync(ActionTestHarness.Context(
+            new CreateStatusSettings { Text = "One", ThreadParts = """["Two"]""" }, Conn), default);
+
+        result.ErrorCategory.Should().Be(StepRunErrorCategory.ConfigurationError);
+        result.Exception!.Message.Should().Contain("may also have been published").And.Contain("Check the account before re-posting it");
+        result.Exception.Message.Split('\n')[^1].Should().EndWith("\"failedPartUnknown\":true}");
+    }
+
+    [Fact]
+    public async Task A_rate_limited_part_is_a_definite_failure()
+    {
+        var bodies = new List<JsonElement>();
+
+        var result = await Sut(Serve(bodies, failOn: 2, failStatus: HttpStatusCode.TooManyRequests)).ExecuteAsync(ActionTestHarness.Context(
+            new CreateStatusSettings { Text = "One", ThreadParts = """["Two"]""" }, Conn), default);
+
+        result.Exception!.Message.Should().Contain("could not be posted").And.EndWith("\"failedPartUnknown\":false}");
     }
 
     [Fact]
@@ -110,7 +136,6 @@ public class ThreadAndWarningTests
         var result = await Sut(Serve(bodies)).ExecuteAsync(ActionTestHarness.Context(new CreateStatusSettings { Text = "Hi" }, Conn), default);
 
         result.Status.Should().Be(ActionResultStatus.Success);
-        bodies.Single().TryGetProperty("spoiler_text", out _).Should().BeFalse();
-        bodies.Single().TryGetProperty("in_reply_to_id", out _).Should().BeFalse();
+        bodies.Single().GetRawText().Should().Be("""{"status":"Hi","visibility":"public"}""");
     }
 }
