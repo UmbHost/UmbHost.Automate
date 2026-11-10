@@ -86,6 +86,20 @@ public sealed class CreatePostAction : ActionBase<CreatePostSettings, CreatePost
                 StepRunErrorCategory.Validation);
         }
 
+        var (threadParts, threadError) = ThreadParts.Parse(settings.ThreadParts);
+        if (threadError is not null)
+        {
+            return ActionResult.Failed(new ArgumentException(threadError), StepRunErrorCategory.Validation);
+        }
+
+        var tooLong = threadParts.Select((t, i) => (Part: i + 2, Text: t)).FirstOrDefault(t => new StringInfo(t.Text).LengthInTextElements > MaxGraphemes);
+        if (tooLong.Text is not null)
+        {
+            return ActionResult.Failed(
+                new ArgumentException($"Part {tooLong.Part} of the thread is over Bluesky's {MaxGraphemes} character limit."),
+                StepRunErrorCategory.Validation);
+        }
+
         var conn = context.Connection?.GetSettings<BlueskyConnectionSettings>();
         if (conn is null || string.IsNullOrWhiteSpace(conn.Identifier) || string.IsNullOrWhiteSpace(conn.AppPassword))
         {
@@ -100,31 +114,7 @@ public sealed class CreatePostAction : ActionBase<CreatePostSettings, CreatePost
             return PostOutcome.FromPreparationResponse(Network, "sign-in", sessionStatus, sessionBody);
         }
 
-        var record = new JsonObject
-        {
-            ["$type"] = "app.bsky.feed.post",
-            ["text"] = settings.Text,
-            ["createdAt"] = DateTime.UtcNow.ToString("yyyy-MM-ddTHH:mm:ss.fffZ", CultureInfo.InvariantCulture),
-        };
-
-        if (!string.IsNullOrWhiteSpace(settings.Language))
-        {
-            record["langs"] = new JsonArray(settings.Language);
-        }
-
-        var facets = LinkFacets.Find(settings.Text);
-        if (facets.Count > 0)
-        {
-            record["facets"] = new JsonArray(facets.Select(f => (JsonNode)new JsonObject
-            {
-                ["index"] = new JsonObject { ["byteStart"] = f.ByteStart, ["byteEnd"] = f.ByteEnd },
-                ["features"] = new JsonArray(new JsonObject
-                {
-                    ["$type"] = "app.bsky.richtext.facet#link",
-                    ["uri"] = f.Uri,
-                }),
-            }).ToArray());
-        }
+        var record = BuildRecord(settings.Text, settings.Language);
 
         if (!string.IsNullOrWhiteSpace(settings.ImageUrl))
         {
@@ -174,6 +164,74 @@ public sealed class CreatePostAction : ActionBase<CreatePostSettings, CreatePost
             record["embed"] = new JsonObject { ["$type"] = "app.bsky.embed.external", ["external"] = external };
         }
 
+        var (first, firstFailure, _) = await CreateRecordAsync(client, session, record, cancellationToken);
+        if (first is null)
+        {
+            return firstFailure!;
+        }
+
+        // The post exists from here on: never fail, or a retry would publish it again.
+        var urls = new List<string> { first.Url };
+        var parent = first;
+        for (var i = 0; i < threadParts.Count; i++)
+        {
+            var part = BuildRecord(threadParts[i], settings.Language);
+            part["reply"] = new JsonObject
+            {
+                ["root"] = new JsonObject { ["uri"] = first.Uri, ["cid"] = first.Cid },
+                ["parent"] = new JsonObject { ["uri"] = parent.Uri, ["cid"] = parent.Cid },
+            };
+
+            var (posted, _, detail) = await CreateRecordAsync(client, session, part, cancellationToken);
+            if (posted is null)
+            {
+                return ThreadParts.PartFailed(Network, i + 2, threadParts.Count + 1, urls, detail!);
+            }
+
+            urls.Add(posted.Url);
+            parent = posted;
+        }
+
+        return Success(new CreatePostOutput { Uri = first.Uri, Cid = first.Cid, PostUrl = first.Url, ThreadUrls = urls });
+    }
+
+    private sealed record Created(string Uri, string Cid, string Url);
+
+    private static JsonObject BuildRecord(string text, string? language)
+    {
+        var record = new JsonObject
+        {
+            ["$type"] = "app.bsky.feed.post",
+            ["text"] = text,
+            ["createdAt"] = DateTime.UtcNow.ToString("yyyy-MM-ddTHH:mm:ss.fffZ", CultureInfo.InvariantCulture),
+        };
+
+        if (!string.IsNullOrWhiteSpace(language))
+        {
+            record["langs"] = new JsonArray(language);
+        }
+
+        var facets = LinkFacets.Find(text);
+        if (facets.Count > 0)
+        {
+            record["facets"] = new JsonArray(facets.Select(f => (JsonNode)new JsonObject
+            {
+                ["index"] = new JsonObject { ["byteStart"] = f.ByteStart, ["byteEnd"] = f.ByteEnd },
+                ["features"] = new JsonArray(new JsonObject
+                {
+                    ["$type"] = "app.bsky.richtext.facet#link",
+                    ["uri"] = f.Uri,
+                }),
+            }).ToArray());
+        }
+
+        return record;
+    }
+
+    /// <summary>Creates one post record. On failure returns the step failure (first post) and a plain detail (later parts).</summary>
+    private static async Task<(Created? Created, ActionResult? Failure, string? Detail)> CreateRecordAsync(
+        HttpClient client, BlueskySession session, JsonObject record, CancellationToken cancellationToken)
+    {
         string body;
         try
         {
@@ -184,25 +242,18 @@ public sealed class CreatePostAction : ActionBase<CreatePostSettings, CreatePost
             body = await response.Content.ReadAsStringAsync(cancellationToken);
             if (!response.IsSuccessStatusCode)
             {
-                return PostOutcome.FromResponse(Network, response.StatusCode, body, idempotent: false);
+                return (null, PostOutcome.FromResponse(Network, response.StatusCode, body, idempotent: false), $"{Network} returned {(int)response.StatusCode}: {body}");
             }
         }
         catch (Exception ex)
         {
-            return PostOutcome.FromException(Network, ex, idempotent: false);
+            return (null, PostOutcome.FromException(Network, ex, idempotent: false), ex.Message);
         }
 
-        // The post exists from here on: never fail, or a retry would publish it again.
         using var doc = JsonDocument.Parse(body);
         var uri = doc.RootElement.TryGetProperty("uri", out var u) ? u.GetString() ?? string.Empty : string.Empty;
         var cid = doc.RootElement.TryGetProperty("cid", out var c) ? c.GetString() ?? string.Empty : string.Empty;
         var rkey = uri[(uri.LastIndexOf('/') + 1)..];
-
-        return Success(new CreatePostOutput
-        {
-            Uri = uri,
-            Cid = cid,
-            PostUrl = $"https://bsky.app/profile/{session.Handle}/post/{rkey}",
-        });
+        return (new Created(uri, cid, $"https://bsky.app/profile/{session.Handle}/post/{rkey}"), null, null);
     }
 }

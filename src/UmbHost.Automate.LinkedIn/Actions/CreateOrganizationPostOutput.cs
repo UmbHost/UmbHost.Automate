@@ -9,4 +9,7 @@ public sealed class CreateOrganizationPostOutput
     public string PostUrn { get; init; } = string.Empty;
 
     public string PostUrl { get; init; } = string.Empty;
+
+    /// <summary>Set when the post is live but the first comment could not be added.</summary>
+    public string? Warning { get; init; }
 }

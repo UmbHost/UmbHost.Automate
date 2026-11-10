@@ -15,4 +15,7 @@ public sealed class CreatePostSettings
 
     [Field(Label = "Image Alt Text", Description = "Describes the image for screen readers (1000 characters max).", SortOrder = 2, SupportsBindings = true)]
     public string? ImageAltText { get; set; }
+
+    [Field(Label = "Thread Parts", Description = "Optional JSON array of further posts, e.g. [\"Second\",\"Third\"] (max 10). Each is posted as a reply to the one before.", SortOrder = 3, SupportsBindings = true)]
+    public string? ThreadParts { get; set; }
 }

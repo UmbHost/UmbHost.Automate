@@ -156,11 +156,45 @@ public sealed class CreateOrganizationPostAction : ActionBase<CreateOrganization
             return PostOutcome.FromException(Network, ex, idempotent: false);
         }
 
+        // The post is live from here on: a failed comment is a warning, never a failure (a retry would post twice).
+        string? warning = null;
+        if (!string.IsNullOrWhiteSpace(settings.FirstComment))
+        {
+            warning = postUrn.Length == 0
+                ? "The post was published but LinkedIn did not return its id, so the first comment was not added."
+                : await AddFirstCommentAsync(client, postUrn, author, settings.FirstComment, cancellationToken);
+        }
+
         return Success(new CreateOrganizationPostOutput
         {
             PostUrn = postUrn,
             PostUrl = postUrn.Length > 0 ? $"https://www.linkedin.com/feed/update/{postUrn}/" : string.Empty,
+            Warning = warning,
         });
+    }
+
+    /// <summary>Comments on the new post as its author. Returns a warning when that fails, or null on success.</summary>
+    private static async Task<string?> AddFirstCommentAsync(
+        HttpClient client, string postUrn, string actor, string text, CancellationToken cancellationToken)
+    {
+        try
+        {
+            using var response = await client.PostAsJsonAsync(
+                $"socialActions/{Uri.EscapeDataString(postUrn)}/comments",
+                new JsonObject { ["actor"] = actor, ["object"] = postUrn, ["message"] = new JsonObject { ["text"] = text } },
+                cancellationToken);
+            if (response.IsSuccessStatusCode)
+            {
+                return null;
+            }
+
+            var body = await response.Content.ReadAsStringAsync(cancellationToken);
+            return $"The post was published but the first comment could not be added: LinkedIn returned {(int)response.StatusCode}: {(body.Length <= 300 ? body : body[..300] + "…")}";
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException || !cancellationToken.IsCancellationRequested)
+        {
+            return $"The post was published but the first comment could not be added: {ex.Message}";
+        }
     }
 
     /// <summary>

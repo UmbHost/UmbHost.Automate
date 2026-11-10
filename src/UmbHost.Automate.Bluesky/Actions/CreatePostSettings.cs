@@ -30,4 +30,7 @@ public sealed class CreatePostSettings
 
     [Field(Label = "Language", Description = "Optional language code, e.g. en.", SortOrder = 7)]
     public string? Language { get; set; }
+
+    [Field(Label = "Thread Parts", Description = "Optional JSON array of further posts, e.g. [\"Second\",\"Third\"] (max 10). Each is posted as a reply to the one before.", SortOrder = 8, SupportsBindings = true)]
+    public string? ThreadParts { get; set; }
 }

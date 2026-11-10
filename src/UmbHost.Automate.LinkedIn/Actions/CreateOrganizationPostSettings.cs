@@ -27,4 +27,7 @@ public sealed class CreateOrganizationPostSettings
 
     [Field(Label = "Image Alt Text", Description = "Describes the image for screen readers.", SortOrder = 6, SupportsBindings = true)]
     public string? ImageAltText { get; set; }
+
+    [Field(Label = "First Comment", Description = "Optional comment added under the post as the page, e.g. a link. If it fails the post stays published and the output carries a warning.", SortOrder = 7, SupportsBindings = true)]
+    public string? FirstComment { get; set; }
 }

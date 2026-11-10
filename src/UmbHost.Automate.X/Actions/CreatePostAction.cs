@@ -60,6 +60,12 @@ public sealed class CreatePostAction : ActionBase<CreatePostSettings, CreatePost
             return ActionResult.Failed(new ArgumentException($"Alt text is limited to {MaxAltTextLength} characters."), StepRunErrorCategory.Validation);
         }
 
+        var (threadParts, threadError) = ThreadParts.Parse(settings.ThreadParts);
+        if (threadError is not null)
+        {
+            return ActionResult.Failed(new ArgumentException(threadError), StepRunErrorCategory.Validation);
+        }
+
         var conn = context.Connection?.GetSettings<XConnectionSettings>();
         if (conn?.OAuthCredentialsId is not { } credentialsId)
         {
@@ -91,6 +97,42 @@ public sealed class CreatePostAction : ActionBase<CreatePostSettings, CreatePost
             post["media"] = new JsonObject { ["media_ids"] = new JsonArray(mediaId) };
         }
 
+        var (firstId, firstFailure, _) = await SendAsync(client, post, cancellationToken);
+        if (firstId is null)
+        {
+            return firstFailure!;
+        }
+
+        var urls = new List<string> { UrlOf(firstId) };
+        var previousId = firstId;
+        for (var i = 0; i < threadParts.Count; i++)
+        {
+            var part = new JsonObject
+            {
+                ["text"] = threadParts[i],
+                ["reply"] = new JsonObject { ["in_reply_to_tweet_id"] = previousId },
+            };
+
+            var (id, _, detail) = await SendAsync(client, part, cancellationToken);
+            if (id is null)
+            {
+                return ThreadParts.PartFailed(Network, i + 2, threadParts.Count + 1, urls, detail!);
+            }
+
+            urls.Add(UrlOf(id));
+            previousId = id;
+        }
+
+        return Success(new CreatePostOutput { PostId = firstId, PostUrl = urls[0], ThreadUrls = urls });
+    }
+
+    // X redirects /i/web/status/{id} to the post under its author's handle.
+    private static string UrlOf(string id) => id.Length > 0 ? $"https://x.com/i/web/status/{id}" : string.Empty;
+
+    /// <summary>Creates one post. On failure returns the step failure (first post) and a plain detail (later parts).</summary>
+    private static async Task<(string? Id, ActionResult? Failure, string? Detail)> SendAsync(
+        HttpClient client, JsonObject post, CancellationToken cancellationToken)
+    {
         string body;
         try
         {
@@ -98,26 +140,19 @@ public sealed class CreatePostAction : ActionBase<CreatePostSettings, CreatePost
             body = await response.Content.ReadAsStringAsync(cancellationToken);
             if (!response.IsSuccessStatusCode)
             {
-                return PostOutcome.FromResponse(Network, response.StatusCode, body, idempotent: false);
+                return (null, PostOutcome.FromResponse(Network, response.StatusCode, body, idempotent: false), $"{Network} returned {(int)response.StatusCode}: {body}");
             }
         }
         catch (Exception ex)
         {
-            return PostOutcome.FromException(Network, ex, idempotent: false);
+            return (null, PostOutcome.FromException(Network, ex, idempotent: false), ex.Message);
         }
 
         using var doc = JsonDocument.Parse(body);
         var id = doc.RootElement.TryGetProperty("data", out var data) && data.TryGetProperty("id", out var i)
             ? i.GetString() ?? string.Empty
             : string.Empty;
-
-        return Success(new CreatePostOutput
-        {
-            PostId = id,
-
-            // X redirects /i/web/status/{id} to the post under its author's handle.
-            PostUrl = id.Length > 0 ? $"https://x.com/i/web/status/{id}" : string.Empty,
-        });
+        return (id, null, null);
     }
 
     private async Task<(string? MediaId, ActionResult? Failure)> UploadImageAsync(
