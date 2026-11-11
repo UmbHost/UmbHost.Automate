@@ -10,7 +10,7 @@ The X API is pay-per-use. Each post is billed, and **a post containing a link is
 
 **Reading metrics costs money too:** $0.005 for each post returned (not per request). Re-reading a post in the same UTC day isn't charged again, though X calls that a soft guarantee. Reads are capped at 3 million posts a month. So metrics are off unless **both** switches are on:
 
-- this provider's `Umbraco:Automate:Providers:Twitter:Insights` (default `false`). While it's off, **Get X Post Metrics** sends nothing to X, not even a token refresh, and returns every id as `needsPermission` with reason `insights_off`;
+- this provider's `Umbraco:Automate:Providers:Twitter:Insights` (default `false`; only `true` turns it on). While it's off, **Get X Post Metrics** sends nothing to X, not even a token refresh, and returns every id as `needsPermission` with reason `insights_off`;
 - for UmbSocial, **X metrics in Social › Settings** (default off). UmbSocial doesn't run the metrics automation while it's off.
 
 ## Testing status

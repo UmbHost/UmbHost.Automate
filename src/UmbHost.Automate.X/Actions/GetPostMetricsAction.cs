@@ -50,7 +50,8 @@ public sealed partial class GetPostMetricsAction : ActionBase<GetPostMetricsSett
     internal const string InsightsSetting = "Umbraco:Automate:Providers:Twitter:Insights";
     private const int MaxIdsPerCall = 100;
     private const string Fields = "public_metrics,non_public_metrics,organic_metrics";
-    private const string NotFoundType = "https://api.x.com/2/problems/resource-not-found";
+    // Matched on the path: the problem type's host has been api.twitter.com as well as api.x.com.
+    private const string NotFoundPath = "/problems/resource-not-found";
 
     private static readonly string[] PublicNames =
         ["impression_count", "like_count", "retweet_count", "reply_count", "quote_count", "bookmark_count"];
@@ -75,7 +76,7 @@ public sealed partial class GetPostMetricsAction : ActionBase<GetPostMetricsSett
     }
 
     // X's PostId pattern, without a leading zero (which would name a different post to us than to X).
-    [GeneratedRegex("^[1-9][0-9]{0,18}$")]
+    [GeneratedRegex(@"^[1-9][0-9]{0,18}\z")]
     private static partial Regex PostId();
 
     /// <inheritdoc />
@@ -88,7 +89,8 @@ public sealed partial class GetPostMetricsAction : ActionBase<GetPostMetricsSett
         }
 
         // Off by default: every read is billed. Nothing goes to X while it's off, not even a token refresh.
-        if (!_configuration.GetValue<bool>(InsightsSetting))
+        // Only "true" (any case) turns it on; anything else, malformed included, is off.
+        if (!string.Equals(_configuration[InsightsSetting], "true", StringComparison.OrdinalIgnoreCase))
         {
             return Success(new GetPostMetricsOutput
             {
@@ -131,7 +133,14 @@ public sealed partial class GetPostMetricsAction : ActionBase<GetPostMetricsSett
                         return ReadOutcome.FromResponse(Network, response.StatusCode, body);
                     }
 
-                    Read(body, chunk, settled);
+                    try
+                    {
+                        Read(body, chunk, settled);
+                    }
+                    catch (Exception ex) when (IsUnreadable(ex))
+                    {
+                        return Unreadable(ex);
+                    }
                 }
             }
         }
@@ -139,14 +148,17 @@ public sealed partial class GetPostMetricsAction : ActionBase<GetPostMetricsSett
         {
             return ReadOutcome.FromException(ex, cancellationToken);
         }
-        catch (Exception ex) when (ex is JsonException or KeyNotFoundException or InvalidOperationException)
-        {
-            return ActionResult.Failed(new InvalidOperationException($"{Network} returned an unreadable answer.", ex), StepRunErrorCategory.InvalidResponse);
-        }
 
         var results = ids.Select(id => settled.TryGetValue(id, out var result) ? result : PostMetricsResult.Gone(id)).ToList();
         return Success(new GetPostMetricsOutput { Results = results });
     }
+
+    /// <summary>The step failure for an answer that can't be read.</summary>
+    private static ActionResult Unreadable(Exception ex)
+        => ActionResult.Failed(new InvalidOperationException($"{Network} returned an unreadable answer.", ex), StepRunErrorCategory.InvalidResponse);
+
+    // Only the parse of a successful answer is caught as unreadable, never the token lookup or the request.
+    private static bool IsUnreadable(Exception ex) => ex is JsonException or KeyNotFoundException or InvalidOperationException;
 
     /// <summary>Settles the chunk's ids from one answer: posts in <c>data</c> are ok; ids in <c>errors</c> are gone or unavailable.</summary>
     private static void Read(string body, IReadOnlyCollection<string> chunk, Dictionary<string, PostMetricsResult> settled)
@@ -183,7 +195,7 @@ public sealed partial class GetPostMetricsAction : ActionBase<GetPostMetricsSett
                 }
 
                 var type = error.TryGetProperty("type", out var t) ? t.GetString() : null;
-                settled[id] = type == NotFoundType
+                settled[id] = type is not null && type.EndsWith(NotFoundPath, StringComparison.Ordinal)
                     ? PostMetricsResult.Gone(id)
                     : PostMetricsResult.Unavailable(id, PostMetricsReason.ScopeMissing);
             }

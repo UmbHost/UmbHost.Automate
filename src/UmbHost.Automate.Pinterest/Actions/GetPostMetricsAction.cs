@@ -52,7 +52,7 @@ public sealed partial class GetPostMetricsAction : ActionBase<GetPostMetricsSett
     }
 
     // The spec's PinKey (^\d+$), without a leading zero.
-    [GeneratedRegex("^[1-9][0-9]{0,29}$")]
+    [GeneratedRegex(@"^[1-9][0-9]{0,29}\z")]
     private static partial Regex PinId();
 
     /// <inheritdoc />
@@ -109,7 +109,14 @@ public sealed partial class GetPostMetricsAction : ActionBase<GetPostMetricsSett
                         return ReadOutcome.FromResponse(Network, response.StatusCode, body);
                     }
 
-                    settled[id] = Read(id, body);
+                    try
+                    {
+                        settled[id] = Read(id, body);
+                    }
+                    catch (Exception ex) when (IsUnreadable(ex))
+                    {
+                        return Unreadable(ex);
+                    }
                 }
             }
         }
@@ -117,14 +124,17 @@ public sealed partial class GetPostMetricsAction : ActionBase<GetPostMetricsSett
         {
             return ReadOutcome.FromException(ex, cancellationToken);
         }
-        catch (Exception ex) when (ex is JsonException or KeyNotFoundException or InvalidOperationException)
-        {
-            return ActionResult.Failed(new InvalidOperationException($"{Network} returned an unreadable answer.", ex), StepRunErrorCategory.InvalidResponse);
-        }
 
         var results = ids.Select(id => settled.TryGetValue(id, out var result) ? result : PostMetricsResult.Gone(id)).ToList();
         return Success(new GetPostMetricsOutput { Results = results });
     }
+
+    /// <summary>The step failure for an answer that can't be read.</summary>
+    private static ActionResult Unreadable(Exception ex)
+        => ActionResult.Failed(new InvalidOperationException($"{Network} returned an unreadable answer.", ex), StepRunErrorCategory.InvalidResponse);
+
+    // Only the parse of a successful answer is caught as unreadable, never the token lookup or the request.
+    private static bool IsUnreadable(Exception ex) => ex is JsonException or KeyNotFoundException or InvalidOperationException;
 
     private static PostMetricsResult Read(string id, string body)
     {

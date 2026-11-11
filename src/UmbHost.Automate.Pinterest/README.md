@@ -57,6 +57,8 @@ Output: `results`, one per id in order, each with `id`, `state`, `values` and `r
 - A Pin with no lifetime metrics is `unavailable` with reason `unsupported`. Pinterest only has them for video and Idea Pins created before 20 March 2023.
 - A 401 fails the step. A 408, 429, 5xx or timeout fails it and Automate retries.
 
+Pins are read one at a time, so a 429 or 5xx part-way through a batch fails the step, and Automate's retry reads the whole batch again.
+
 ## Retries
 
 Pinterest has no idempotency key. If the create request fails without a clear answer the step fails **without retrying**; check the board before re-running.

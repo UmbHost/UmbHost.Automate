@@ -211,4 +211,50 @@ public class GetPostMetricsActionTests
         result.ErrorCategory.Should().Be(StepRunErrorCategory.Authentication);
         handler.VerifyAnyRequest(Times.Never());
     }
+
+    [Fact]
+    public async Task an_id_with_a_trailing_newline_is_gone_and_never_sent()
+    {
+        var handler = new Mock<HttpMessageHandler>();
+        handler.SetupRequest(HttpMethod.Get, PinUrl("5")).ReturnsResponse(HttpStatusCode.OK, new StringContent(Pin("5").ToJsonString()));
+
+        var results = Results(await Sut(handler).ExecuteAsync(Context("123\n", "5"), default));
+
+        results.Select(r => r.State).Should().Equal("gone", "ok");
+        handler.VerifyAnyRequest(Times.Once());
+    }
+
+    [Fact]
+    public async Task a_token_service_failure_is_not_reported_as_an_unreadable_answer()
+    {
+        var handler = new Mock<HttpMessageHandler>();
+        var credentials = new Mock<IOAuthCredentialsService>();
+        credentials.Setup(c => c.GetValidAccessTokenAsync(CredentialsId, It.IsAny<CancellationToken>()))
+                   .ThrowsAsync(new InvalidOperationException("credential store failed"));
+        var sut = new GetPostMetricsAction(ActionTestHarness.Infrastructure, handler.CreateClientFactory(), credentials.Object);
+
+        var act = () => sut.ExecuteAsync(Context("1"), default);
+
+        await act.Should().ThrowAsync<InvalidOperationException>().WithMessage("credential store failed");
+    }
+
+    [Fact]
+    public async Task the_cancellation_token_reaches_the_http_call()
+    {
+        using var cts = new CancellationTokenSource();
+        var seenCancelled = false;
+        var handler = new Mock<HttpMessageHandler>();
+        handler.SetupRequest(HttpMethod.Get, PinUrl("1")).Returns(async (HttpRequestMessage _, CancellationToken ct) =>
+        {
+            await cts.CancelAsync();
+            seenCancelled = ct.IsCancellationRequested;
+            ct.ThrowIfCancellationRequested();
+            return new HttpResponseMessage(HttpStatusCode.OK);
+        });
+
+        var result = await Sut(handler).ExecuteAsync(Context("1"), cts.Token);
+
+        seenCancelled.Should().BeTrue();
+        result.ErrorCategory.Should().Be(StepRunErrorCategory.Cancelled);
+    }
 }
