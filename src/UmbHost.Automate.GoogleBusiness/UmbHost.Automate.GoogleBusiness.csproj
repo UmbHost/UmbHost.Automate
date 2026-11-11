@@ -1,0 +1,44 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+
+    <PackageId>UmbHost.Automate.GoogleBusiness</PackageId>
+    <Version>1.0.0</Version>
+    <Authors>UmbHost</Authors>
+    <Company>UmbHost</Company>
+    <Description>Google Business Profile connection type (OAuth) and a Create Update action (call-to-action button, image) for Umbraco Automate.</Description>
+    <PackageTags>umbraco;automate;social;google;google-business-profile;umbraco-marketplace</PackageTags>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <PackageProjectUrl>https://github.com/UmbHost/UmbHost.Automate</PackageProjectUrl>
+    <RepositoryUrl>https://github.com/UmbHost/UmbHost.Automate</RepositoryUrl>
+    <RepositoryType>git</RepositoryType>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+
+    <GeneratePackageOnBuild>false</GeneratePackageOnBuild>
+    <IncludeSymbols>true</IncludeSymbols>
+    <SymbolPackageFormat>snupkg</SymbolPackageFormat>
+  </PropertyGroup>
+
+  <!-- Umbraco.Automate.OpenIddict 17.1.5 is the release for Automate 17.5.x; it brings the IOAuthConnectionType.SetupDocsUrl link
+       and needs Automate.Core 17.5+ and Umbraco CMS 17.6+. -->
+  <ItemGroup>
+    <PackageReference Include="Umbraco.Automate.Core" Version="[17.5.0, 19.0.0)" />
+    <PackageReference Include="Umbraco.Automate.OpenIddict" Version="[17.1.5, 19.0.0)" />
+    <PackageReference Include="Umbraco.Cms.Core" Version="[17.6.0, 19.0.0)" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Compile Include="..\Shared\*.cs" LinkBase="Shared" />
+    <InternalsVisibleTo Include="UmbHost.Automate.GoogleBusiness.Tests" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Include="README.md" Pack="true" PackagePath="\" />
+    <None Include="umbraco-marketplace.json" Pack="true" PackagePath="\" />
+    <None Include="..\..\LICENSE" Pack="true" PackagePath="\" />
+  </ItemGroup>
+
+</Project>
