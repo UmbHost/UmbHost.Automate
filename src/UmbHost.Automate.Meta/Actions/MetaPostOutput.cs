@@ -5,6 +5,10 @@ namespace UmbHost.Automate.Meta.Actions;
 /// </summary>
 public sealed class MetaPostOutput
 {
+    /// <summary>
+    /// The Facebook Page post id (a photo post's <c>post_id</c>, not the photo id) or the Instagram media id,
+    /// bound by UmbSocial as the post's external id.
+    /// </summary>
     public string PostId { get; init; } = string.Empty;
 
     /// <summary>

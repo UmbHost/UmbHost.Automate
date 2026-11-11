@@ -5,6 +5,7 @@ namespace UmbHost.Automate.Threads.Actions;
 /// </summary>
 public sealed class CreateThreadsPostOutput
 {
+    /// <summary>The first published media id, bound by UmbSocial as the post's external id.</summary>
     public string PostId { get; init; } = string.Empty;
 
     public string PostUrl { get; init; } = string.Empty;

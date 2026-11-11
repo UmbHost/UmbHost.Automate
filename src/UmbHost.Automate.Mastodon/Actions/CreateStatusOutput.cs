@@ -5,6 +5,7 @@ namespace UmbHost.Automate.Mastodon.Actions;
 /// </summary>
 public sealed class CreateStatusOutput
 {
+    /// <summary>The status id on the posting instance, bound by UmbSocial as the post's external id.</summary>
     public string StatusId { get; init; } = string.Empty;
 
     /// <summary>The status's public URL.</summary>

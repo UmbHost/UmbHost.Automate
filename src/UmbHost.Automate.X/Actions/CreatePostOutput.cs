@@ -5,6 +5,7 @@ namespace UmbHost.Automate.X.Actions;
 /// </summary>
 public sealed class CreatePostOutput
 {
+    /// <summary>The post id (the first post's, for a thread), bound by UmbSocial as the post's external id.</summary>
     public string PostId { get; init; } = string.Empty;
 
     public string PostUrl { get; init; } = string.Empty;

@@ -5,7 +5,9 @@ namespace UmbHost.Automate.GoogleBusiness.Actions;
 /// </summary>
 public sealed class CreateUpdateOutput
 {
-    /// <summary>The update's resource name, <c>accounts/…/locations/…/localPosts/…</c>.</summary>
+    /// <summary>
+    /// The update's resource name, <c>accounts/…/locations/…/localPosts/…</c>, bound by UmbSocial as the post's external id.
+    /// </summary>
     public string PostId { get; init; } = string.Empty;
 
     /// <summary>The update in Google Search (the post's <c>searchUrl</c>).</summary>
