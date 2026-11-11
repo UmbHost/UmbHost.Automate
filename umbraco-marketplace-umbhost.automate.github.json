@@ -6,15 +6,23 @@
     "Url": "https://umbhost.net",
     "ImageUrl": "https://github.com/UmbHost.png"
   },
-  "Category": "Automation",
+  "Category": "Developer Tools",
   "Description": "GitHub connection, actions, a jsonpath binding filter and an X-Hub-Signature-256 webhook authenticator for Umbraco Automate.",
-  "ImageUrl": "https://github.com/UmbHost/UmbHost.Automate/blob/main/umbHostAutomateGitHub.png",
-  "LicenseTypes": ["Free"],
+  "LicenseTypes": [
+    "Free"
+  ],
   "IssueTrackerUrl": "https://github.com/UmbHost/UmbHost.Automate/issues",
   "DocumentationUrl": "https://github.com/UmbHost/UmbHost.Automate/tree/main/src/UmbHost.Automate.GitHub",
   "PackageType": "Package",
   "Title": "UmbHost.Automate.GitHub",
-  "Tags": ["umbraco", "automate", "automation", "github", "webhooks", "oauth"],
+  "Tags": [
+    "umbraco",
+    "automate",
+    "automation",
+    "github",
+    "webhooks",
+    "oauth"
+  ],
   "RelatedPackages": [
     {
       "PackageId": "Umbraco.Automate",

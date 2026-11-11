@@ -6,27 +6,30 @@
     "Url": "https://umbhost.net",
     "ImageUrl": "https://github.com/UmbHost.png"
   },
-  "Category": "Automation",
-  "Description": "Threads connection (OAuth) and a Create Threads Post action for Umbraco Automate: posts with an image and alt text, and threads of replies.",
+  "Category": "Developer Tools",
+  "Description": "Teamwork Projects connection type and actions for Umbraco Automate. Create tasks, comment, and complete/reopen tasks as part of an automation workflow.",
   "LicenseTypes": [
     "Free"
   ],
   "IssueTrackerUrl": "https://github.com/UmbHost/UmbHost.Automate/issues",
-  "DocumentationUrl": "https://github.com/UmbHost/UmbHost.Automate/tree/main/src/UmbHost.Automate.Threads",
+  "DocumentationUrl": "https://github.com/UmbHost/UmbHost.Automate/tree/main/src/UmbHost.Automate.Teamwork",
   "PackageType": "Package",
-  "Title": "UmbHost.Automate.Threads",
+  "Title": "UmbHost.Automate.Teamwork",
   "Tags": [
     "umbraco",
     "automate",
     "automation",
-    "social",
-    "threads",
-    "meta"
+    "teamwork",
+    "project-management"
   ],
   "RelatedPackages": [
     {
       "PackageId": "Umbraco.Automate",
       "Description": "Core automation system for Umbraco CMS"
+    },
+    {
+      "PackageId": "UmbHost.Automate.GitHub",
+      "Description": "GitHub connection, actions, jsonpath filter and webhook authenticator for Umbraco Automate"
     }
   ],
   "LookingForContributors": true

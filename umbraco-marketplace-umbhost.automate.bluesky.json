@@ -6,15 +6,22 @@
     "Url": "https://umbhost.net",
     "ImageUrl": "https://github.com/UmbHost.png"
   },
-  "Category": "Automation",
+  "Category": "Campaign & Marketing",
   "Description": "Bluesky connection and a Create Post action for Umbraco Automate: publish posts with clickable links and an image as part of an automation.",
-  "ImageUrl": "https://github.com/UmbHost/UmbHost.Automate/blob/main/umbHostAutomateBluesky.png",
-  "LicenseTypes": ["Free"],
+  "LicenseTypes": [
+    "Free"
+  ],
   "IssueTrackerUrl": "https://github.com/UmbHost/UmbHost.Automate/issues",
   "DocumentationUrl": "https://github.com/UmbHost/UmbHost.Automate/tree/main/src/UmbHost.Automate.Bluesky",
   "PackageType": "Package",
   "Title": "UmbHost.Automate.Bluesky",
-  "Tags": ["umbraco", "automate", "automation", "social", "bluesky"],
+  "Tags": [
+    "umbraco",
+    "automate",
+    "automation",
+    "social",
+    "bluesky"
+  ],
   "RelatedPackages": [
     {
       "PackageId": "Umbraco.Automate",

@@ -6,22 +6,21 @@
     "Url": "https://umbhost.net",
     "ImageUrl": "https://github.com/UmbHost.png"
   },
-  "Category": "Automation",
-  "Description": "Google Business Profile connection (OAuth) and a Create Update action for Umbraco Automate: updates with a button and an image.",
+  "Category": "Campaign & Marketing",
+  "Description": "Pinterest connection (OAuth) and a Create Pin action for Umbraco Automate: Pins with a title, description, link and alt text, on a board you choose.",
   "LicenseTypes": [
     "Free"
   ],
   "IssueTrackerUrl": "https://github.com/UmbHost/UmbHost.Automate/issues",
-  "DocumentationUrl": "https://github.com/UmbHost/UmbHost.Automate/tree/main/src/UmbHost.Automate.GoogleBusiness",
+  "DocumentationUrl": "https://github.com/UmbHost/UmbHost.Automate/tree/main/src/UmbHost.Automate.Pinterest",
   "PackageType": "Package",
-  "Title": "UmbHost.Automate.GoogleBusiness",
+  "Title": "UmbHost.Automate.Pinterest",
   "Tags": [
     "umbraco",
     "automate",
     "automation",
     "social",
-    "google",
-    "google-business-profile"
+    "pinterest"
   ],
   "RelatedPackages": [
     {

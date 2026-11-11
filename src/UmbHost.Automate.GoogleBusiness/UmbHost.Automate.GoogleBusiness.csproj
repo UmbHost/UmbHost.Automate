@@ -15,6 +15,7 @@
     <PackageProjectUrl>https://github.com/UmbHost/UmbHost.Automate</PackageProjectUrl>
     <RepositoryUrl>https://github.com/UmbHost/UmbHost.Automate</RepositoryUrl>
     <RepositoryType>git</RepositoryType>
+    <PackageIcon>umbHostAutomateGoogleBusiness.png</PackageIcon>
     <PackageReadmeFile>README.md</PackageReadmeFile>
 
     <GeneratePackageOnBuild>false</GeneratePackageOnBuild>
@@ -37,7 +38,8 @@
 
   <ItemGroup>
     <None Include="README.md" Pack="true" PackagePath="\" />
-    <None Include="umbraco-marketplace.json" Pack="true" PackagePath="\" />
+    <None Include="..\..\umbraco-marketplace-umbhost.automate.googlebusiness.json" Pack="true" PackagePath="\" />
+    <None Include="..\..\umbHostAutomateGoogleBusiness.png" Pack="true" PackagePath="\" />
     <None Include="..\..\LICENSE" Pack="true" PackagePath="\" />
   </ItemGroup>
 

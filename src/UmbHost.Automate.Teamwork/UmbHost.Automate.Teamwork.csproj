@@ -30,7 +30,7 @@
 
   <ItemGroup>
     <None Include="README.md" Pack="true" PackagePath="\" />
-    <None Include="umbraco-marketplace.json" Pack="true" PackagePath="\" />
+    <None Include="..\..\umbraco-marketplace-umbhost.automate.teamwork.json" Pack="true" PackagePath="\" />
     <None Include="..\..\umbHostAutomateTeamwork.png" Pack="true" PackagePath="\" />
     <None Include="..\..\LICENSE" Pack="true" PackagePath="\" />
   </ItemGroup>

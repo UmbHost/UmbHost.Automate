@@ -6,21 +6,21 @@
     "Url": "https://umbhost.net",
     "ImageUrl": "https://github.com/UmbHost.png"
   },
-  "Category": "Automation",
-  "Description": "Pinterest connection (OAuth) and a Create Pin action for Umbraco Automate: Pins with a title, description, link and alt text, on a board you choose.",
+  "Category": "Campaign & Marketing",
+  "Description": "LinkedIn connection (OAuth) and a Create Company Post action for Umbraco Automate: publish to a LinkedIn company page with a link card or image.",
   "LicenseTypes": [
     "Free"
   ],
   "IssueTrackerUrl": "https://github.com/UmbHost/UmbHost.Automate/issues",
-  "DocumentationUrl": "https://github.com/UmbHost/UmbHost.Automate/tree/main/src/UmbHost.Automate.Pinterest",
+  "DocumentationUrl": "https://github.com/UmbHost/UmbHost.Automate/tree/main/src/UmbHost.Automate.LinkedIn",
   "PackageType": "Package",
-  "Title": "UmbHost.Automate.Pinterest",
+  "Title": "UmbHost.Automate.LinkedIn",
   "Tags": [
     "umbraco",
     "automate",
     "automation",
     "social",
-    "pinterest"
+    "linkedin"
   ],
   "RelatedPackages": [
     {

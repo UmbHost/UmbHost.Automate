@@ -6,15 +6,23 @@
     "Url": "https://umbhost.net",
     "ImageUrl": "https://github.com/UmbHost.png"
   },
-  "Category": "Automation",
+  "Category": "Campaign & Marketing",
   "Description": "X (Twitter) connection (OAuth 2.0) and a Create Post action for Umbraco Automate: publish posts with an image and alt text.",
-  "ImageUrl": "https://github.com/UmbHost/UmbHost.Automate/blob/main/umbHostAutomateX.png",
-  "LicenseTypes": ["Free"],
+  "LicenseTypes": [
+    "Free"
+  ],
   "IssueTrackerUrl": "https://github.com/UmbHost/UmbHost.Automate/issues",
   "DocumentationUrl": "https://github.com/UmbHost/UmbHost.Automate/tree/main/src/UmbHost.Automate.X",
   "PackageType": "Package",
   "Title": "UmbHost.Automate.X",
-  "Tags": ["umbraco", "automate", "automation", "social", "x", "twitter"],
+  "Tags": [
+    "umbraco",
+    "automate",
+    "automation",
+    "social",
+    "x",
+    "twitter"
+  ],
   "RelatedPackages": [
     {
       "PackageId": "Umbraco.Automate",
