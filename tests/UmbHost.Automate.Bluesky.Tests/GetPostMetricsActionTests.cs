@@ -187,6 +187,18 @@ public class GetPostMetricsActionTests
         UrisOf(requests.Single()).Should().Equal(Uri("a"));
     }
 
+    [Fact]
+    public async Task an_id_with_a_trailing_newline_is_gone_and_never_sent()
+    {
+        var handler = new Mock<HttpMessageHandler>();
+        var requests = ServePosts(handler);
+
+        var results = Results(await Sut(handler).ExecuteAsync(Context(Uri("a") + "\n", Uri("b")), default));
+
+        results.Select(r => r.State).Should().Equal("gone", "ok");
+        UrisOf(requests.Single()).Should().Equal(Uri("b"));
+    }
+
     [Theory]
     [InlineData(HttpStatusCode.TooManyRequests, StepRunErrorCategory.RateLimiting)]
     [InlineData(HttpStatusCode.InternalServerError, StepRunErrorCategory.ServiceUnavailable)]

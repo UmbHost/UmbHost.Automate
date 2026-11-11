@@ -42,7 +42,7 @@ public sealed partial class GetPostMetricsAction : ActionBase<GetPostMetricsSett
         : base(infrastructure)
         => _httpClientFactory = httpClientFactory;
 
-    [GeneratedRegex(@"^at://([^/?#\s]+)/app\.bsky\.feed\.post/([A-Za-z0-9._:~-]{1,512})$")]
+    [GeneratedRegex(@"^at://([^/?#\s]+)/app\.bsky\.feed\.post/([A-Za-z0-9._:~-]{1,512})\z")]
     private static partial Regex PostUri();
 
     /// <inheritdoc />

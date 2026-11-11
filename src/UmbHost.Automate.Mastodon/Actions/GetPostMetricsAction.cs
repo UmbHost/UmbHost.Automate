@@ -48,7 +48,7 @@ public sealed partial class GetPostMetricsAction : ActionBase<GetPostMetricsSett
         => _httpClientFactory = httpClientFactory;
 
     // Mastodon ids are decimal snowflakes with no leading zero: "0123" is refused rather than sent as a different id.
-    [GeneratedRegex(@"^[1-9][0-9]{0,29}$")]
+    [GeneratedRegex(@"^[1-9][0-9]{0,29}\z")]
     private static partial Regex StatusId();
 
     /// <summary>Why an answer leaves the ids it covers unavailable (auth required, or a redirect), or null.</summary>

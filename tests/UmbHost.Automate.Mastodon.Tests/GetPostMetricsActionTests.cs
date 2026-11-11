@@ -375,6 +375,18 @@ public class GetPostMetricsActionTests
     }
 
     [Fact]
+    public async Task an_id_with_a_trailing_newline_is_gone_and_never_sent()
+    {
+        var handler = new Mock<HttpMessageHandler>();
+        var requests = ServeBatch(handler);
+
+        var results = Results(await Sut(handler).ExecuteAsync(Context("123\n", "5"), default));
+
+        results.Select(r => r.State).Should().Equal("gone", "ok");
+        IdsOf(requests.Single()).Should().Equal("5");
+    }
+
+    [Fact]
     public async Task a_status_id_with_leading_zeros_is_gone_and_never_sent()
     {
         var handler = new Mock<HttpMessageHandler>();
