@@ -1,6 +1,6 @@
 # UmbHost.Automate.Bluesky
 
-Bluesky connection and a **Create Bluesky Post** action for [Umbraco Automate](https://github.com/umbraco/Umbraco.Automate).
+Bluesky connection and **Create Bluesky Post** and **Get Bluesky Post Metrics** actions for [Umbraco Automate](https://github.com/umbraco/Umbraco.Automate).
 
 Requires Umbraco Automate 17.4+ / 18.4+ and Umbraco CMS 17.6+.
 
@@ -31,6 +31,16 @@ Requires Umbraco Automate 17.4+ / 18.4+ and Umbraco CMS 17.6+.
 Output: `uri` (at://), `cid`, `postUrl` (bsky.app link).
 
 Link preview cards aren't generated: Bluesky doesn't fetch pages, so a card would mean scraping the page's metadata.
+
+## Get Bluesky Post Metrics
+
+Reads posts' public counts from Bluesky's public AppView (`app.bsky.feed.getPosts`, 25 per call). The read is unauthenticated: the connection only says which account (and so which channel) the automation belongs to.
+
+| Setting | Notes |
+|---|---|
+| Ids | A JSON array of 1 to 100 post at-uris, e.g. `["at://did:plc:…/app.bsky.feed.post/…"]`. An at-uri with a handle is resolved to a DID first. |
+
+Output: `results`, one per id in order, each with `id`, `state` (`ok` or `gone`), `values` (`likeCount`, `repostCount`, `replyCount`, `quoteCount`, `bookmarkCount`) and `reason`. A post Bluesky no longer returns, or a malformed id, is `gone`; it never fails the step. A 429, 5xx or timeout fails the step and Automate retries it (a read is safe to repeat).
 
 ## Retries
 

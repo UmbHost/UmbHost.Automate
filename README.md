@@ -6,8 +6,8 @@ Community provider packages for [Umbraco Automate](https://github.com/umbraco/Um
 |---|---|
 | [`UmbHost.Automate.Teamwork`](src/UmbHost.Automate.Teamwork) | Teamwork Projects connection + Create Task / Add Comment / Set Status actions |
 | [`UmbHost.Automate.GitHub`](src/UmbHost.Automate.GitHub) | GitHub OAuth connection + Rename Title / Add Comment / Set State actions, a `jsonpath` binding filter, and an `X-Hub-Signature-256` webhook authenticator |
-| [`UmbHost.Automate.Bluesky`](src/UmbHost.Automate.Bluesky) | Bluesky app-password connection + Create Post (clickable links, image) |
-| [`UmbHost.Automate.Mastodon`](src/UmbHost.Automate.Mastodon) | Mastodon token connection + Create Status (image, idempotent retries) |
+| [`UmbHost.Automate.Bluesky`](src/UmbHost.Automate.Bluesky) | Bluesky app-password connection + Create Post (clickable links, image) + Get Post Metrics (public counts) |
+| [`UmbHost.Automate.Mastodon`](src/UmbHost.Automate.Mastodon) | Mastodon token connection + Create Status (image, idempotent retries) + Get Post Metrics (public counts) |
 | [`UmbHost.Automate.LinkedIn`](src/UmbHost.Automate.LinkedIn) | LinkedIn OAuth connection + Create Company Post (link card or image) |
 | [`UmbHost.Automate.X`](src/UmbHost.Automate.X) | X (Twitter) OAuth 2.0 connection + Create Post (image, alt text) |
 | [`UmbHost.Automate.Meta`](src/UmbHost.Automate.Meta) | Facebook Page token connection + Create Facebook Page Post / Create Instagram Post |

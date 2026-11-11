@@ -24,6 +24,18 @@ internal static class BlueskyClient
     }
 
     /// <summary>
+    /// A client for Bluesky's public AppView, which serves public reads without a session.
+    /// The official SDK's "Unauthenticated Client" example points at it:
+    /// https://github.com/bluesky-social/atproto/blob/main/packages/lex/lex/README.md#unauthenticated-client
+    /// </summary>
+    public static HttpClient CreatePublic(IHttpClientFactory factory)
+    {
+        var client = factory.CreateClient();
+        client.BaseAddress = new Uri("https://public.api.bsky.app/xrpc/");
+        return client;
+    }
+
+    /// <summary>
     /// Signs in with the app password. Returns the session, or the failed response's status and body.
     /// </summary>
     public static async Task<(BlueskySession? Session, HttpStatusCode Status, string Body)> CreateSessionAsync(

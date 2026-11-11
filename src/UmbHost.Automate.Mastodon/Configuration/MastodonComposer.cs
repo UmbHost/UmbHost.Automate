@@ -21,6 +21,7 @@ public sealed class MastodonComposer : IComposer
             .Add<MastodonConnectionType>();
 
         builder.WithCollectionBuilder<ActionCollectionBuilder>()
-            .Add<CreateStatusAction>();
+            .Add<CreateStatusAction>()
+            .Add<GetPostMetricsAction>();
     }
 }

@@ -21,6 +21,7 @@ public sealed class BlueskyComposer : IComposer
             .Add<BlueskyConnectionType>();
 
         builder.WithCollectionBuilder<ActionCollectionBuilder>()
-            .Add<CreatePostAction>();
+            .Add<CreatePostAction>()
+            .Add<GetPostMetricsAction>();
     }
 }
