@@ -63,7 +63,7 @@ public class InsightsSettingTests
         handler.SetupRequest(HttpMethod.Get, IsPermissions).ReturnsResponse(HttpStatusCode.OK, Permissions(
             ("read_insights", "granted"), ("pages_read_engagement", "granted"), ("pages_read_user_content", "granted"), ("instagram_manage_insights", "granted")));
 
-        var result = await Sut(handler, "TRUE").ValidateAsync(Conn, default);
+        var result = await Sut(handler, " TRUE ").ValidateAsync(Conn, default);
 
         result.Status.Should().Be(ConnectionValidationStatus.Success);
     }

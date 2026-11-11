@@ -22,7 +22,8 @@ namespace UmbHost.Automate.Threads.Actions;
 /// <c>threads_manage_insights</c>: https://developers.facebook.com/docs/threads/insights. Values are <c>data[].values[0].value</c> under
 /// each <c>name</c>. <c>views</c> and <c>shares</c> are "in development"; nested replies aren't counted, so this reads a thread's root
 /// post only. <c>REPOST_FACADE</c> posts "return an empty array", which is <c>unavailable</c> / <c>unsupported</c>. The data delay and
-/// retention aren't stated (<b>UNVERIFIED</b>). Errors are classified by <see cref="GraphError"/> (its UNVERIFIED codes included).
+/// retention aren't stated (<b>UNVERIFIED</b>). Errors are classified by <see cref="GraphError"/> (its UNVERIFIED codes included); a 4xx
+/// it doesn't otherwise classify makes that post <c>unavailable</c> / <c>rejected</c> and the rest of the batch carries on.
 /// </para>
 /// </remarks>
 [Action("threads.getPostMetrics", "Get Threads Post Metrics",
@@ -137,6 +138,9 @@ public sealed partial class GetPostMetricsAction : ActionBase<GetPostMetricsSett
                         return null;
                     case GraphError.Kind.NotFound:
                         settled[id] = PostMetricsResult.Gone(id);
+                        return null;
+                    case GraphError.Kind.Rejected:
+                        settled[id] = PostMetricsResult.Unavailable(id, PostMetricsReason.Rejected);
                         return null;
                     default:
                         return GraphError.Fail(Network, kind, response.StatusCode, body);

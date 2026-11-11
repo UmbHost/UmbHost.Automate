@@ -44,6 +44,7 @@ public class InsightsSettingTests
     [Theory]
     [InlineData("true")]
     [InlineData("TRUE")]
+    [InlineData(" true ")]
     public void insights_on_requests_the_extra_scope(string insights)
         => Registration(insights).Scopes.Should()
             .Contain(["threads_basic", "threads_content_publish", "threads_manage_replies", "threads_manage_insights"]);

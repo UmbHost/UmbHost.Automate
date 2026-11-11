@@ -151,17 +151,79 @@ public class GetInstagramPostMetricsActionTests
     }
 
     [Fact]
-    public async Task an_insights_error_on_a_single_image_still_fails_the_step()
+    public async Task one_rejected_post_in_three_settles_alone()
     {
         var handler = new Mock<HttpMessageHandler>();
-        handler.SetupRequest(r => IsInsights(r, "17900000000000001")).ReturnsResponse(HttpStatusCode.BadRequest, Error(100));
-        handler.SetupRequest(r => IsMediaType(r, "17900000000000001"))
-            .ReturnsResponse(HttpStatusCode.OK, """{"media_type":"IMAGE","id":"17900000000000001"}""");
+        handler.SetupRequest(r => IsInsights(r, "1")).ReturnsResponse(HttpStatusCode.OK, Insights("1", ("likes", 1)));
+        handler.SetupRequest(r => IsInsights(r, "2")).ReturnsResponse(HttpStatusCode.BadRequest, Error(100));
+        handler.SetupRequest(r => IsMediaType(r, "2")).ReturnsResponse(HttpStatusCode.OK, """{"media_type":"IMAGE","id":"2"}""");
+        handler.SetupRequest(r => IsInsights(r, "3")).ReturnsResponse(HttpStatusCode.OK, Insights("3", ("likes", 3)));
 
-        var result = await Sut(handler).ExecuteAsync(Context("17900000000000001"), default);
+        var results = Results(await Sut(handler).ExecuteAsync(Context("1", "2", "3"), default));
+
+        results.Select(r => (r.Id, r.State, r.Reason)).Should().Equal(("1", "ok", null), ("2", "unavailable", "rejected"), ("3", "ok", null));
+    }
+
+    [Theory]
+    [InlineData(HttpStatusCode.BadRequest)]
+    [InlineData(HttpStatusCode.NotFound)]
+    public async Task a_post_whose_type_cant_be_looked_up_is_rejected(HttpStatusCode status)
+    {
+        var handler = new Mock<HttpMessageHandler>();
+        handler.SetupRequest(r => IsInsights(r, "2")).ReturnsResponse(HttpStatusCode.BadRequest, Error(100));
+        handler.SetupRequest(r => IsMediaType(r, "2")).ReturnsResponse(status, Error(100));
+
+        var result = Results(await Sut(handler).ExecuteAsync(Context("2"), default)).Single();
+
+        result.State.Should().Be("unavailable");
+        result.Reason.Should().Be("rejected");
+    }
+
+    [Theory]
+    [InlineData(HttpStatusCode.BadRequest, 4, StepRunErrorCategory.RateLimiting)]
+    [InlineData(HttpStatusCode.TooManyRequests, null, StepRunErrorCategory.RateLimiting)]
+    [InlineData(HttpStatusCode.BadRequest, 190, StepRunErrorCategory.Authentication)]
+    [InlineData(HttpStatusCode.ServiceUnavailable, null, StepRunErrorCategory.ServiceUnavailable)]
+    public async Task a_throttled_or_unauthorised_album_lookup_fails_the_step_as_such(HttpStatusCode status, int? code, StepRunErrorCategory category)
+    {
+        var handler = new Mock<HttpMessageHandler>();
+        handler.SetupRequest(r => IsInsights(r, "2")).ReturnsResponse(HttpStatusCode.BadRequest, Error(100));
+        handler.SetupRequest(r => IsMediaType(r, "2")).ReturnsResponse(status, code is null ? "{}" : Error(code.Value));
+
+        var result = await Sut(handler).ExecuteAsync(Context("2"), default);
 
         result.Status.Should().Be(ActionResultStatus.Failed);
-        result.ErrorCategory.Should().Be(StepRunErrorCategory.Validation);
+        result.ErrorCategory.Should().Be(category);
+    }
+
+    [Fact]
+    public async Task the_cancellation_token_reaches_the_album_lookup()
+    {
+        using var cts = new CancellationTokenSource();
+        var handler = new Mock<HttpMessageHandler>();
+        var reached = false;
+        handler.SetupRequest(r => IsInsights(r, "2")).ReturnsResponse(HttpStatusCode.BadRequest, Error(100));
+        handler.SetupRequest(r => IsMediaType(r, "2")).Returns((HttpRequestMessage _, CancellationToken ct) =>
+        {
+            cts.Cancel();
+            reached = ct.IsCancellationRequested;
+            return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK) { Content = new StringContent("""{"media_type":"IMAGE"}""") });
+        });
+
+        await Sut(handler).ExecuteAsync(Context("2"), cts.Token);
+
+        reached.Should().BeTrue();
+    }
+
+    [Fact]
+    public async Task a_padded_true_turns_insights_on()
+    {
+        var handler = new Mock<HttpMessageHandler>();
+        handler.SetupRequest(r => IsInsights(r, "1")).ReturnsResponse(HttpStatusCode.OK, Insights("1", ("likes", 1)));
+
+        var result = Results(await Sut(handler, " true ").ExecuteAsync(Context("1"), default)).Single();
+
+        result.State.Should().Be("ok");
     }
 
     [Fact]

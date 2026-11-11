@@ -65,7 +65,7 @@ Output: `results`, one per id: `state` (`ok`, `gone`, `unavailable`, `needsPermi
 { "Umbraco": { "Automate": { "Providers": { "Threads": { "Insights": true } } } } }
 ```
 
-Only `true` (in any case) turns it on; anything else, or no value, leaves it off. While it's off the action sends nothing to Threads, not even a token refresh, and returns every id as `needsPermission` with reason `insights_off`.
+Only `true` (in any case, surrounding spaces ignored) turns it on; anything else, or no value, leaves it off. While it's off the action sends nothing to Threads, not even a token refresh, and returns every id as `needsPermission` with reason `insights_off`.
 
 **Existing connections must be authorised again** after you turn it on. Turning it on adds `threads_manage_insights` to what new authorisations ask for, but a connection authorised before that doesn't have it, and its posts come back `needsPermission` with reason `scope_missing` until it is re-authorised.
 
@@ -74,4 +74,5 @@ Things to know:
 - Meta marks `views` and `shares` as "in development".
 - Replies further down a thread aren't counted, so the action reads the thread's first post.
 - A repost comes back with no insights, as `unavailable` with reason `unsupported`.
+- Any other 4xx for a post (except 401, 408 and 429) is `unavailable` with reason `rejected` for that post alone; the rest of the batch is still read. An expired token fails the step; throttling, a 5xx or a timeout fails it and Automate retries.
 - Not confirmed in Meta's docs: how long the figures lag and how long Threads keeps them, and which errors mean "missing permission" or "post gone" for Threads. The package uses the Graph API's codes: 10 and 200-299 for a missing permission, 100 with subcode 33 (or a 404) for a missing post.

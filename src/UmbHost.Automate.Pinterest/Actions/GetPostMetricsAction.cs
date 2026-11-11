@@ -104,6 +104,13 @@ public sealed partial class GetPostMetricsAction : ActionBase<GetPostMetricsSett
                         continue;
                     }
 
+                    // Any other 4xx but 401, 408 and 429 settles this pin alone: the rest of the batch carries on.
+                    if (ReadOutcome.RejectsThePost(response.StatusCode))
+                    {
+                        settled[id] = PostMetricsResult.Unavailable(id, PostMetricsReason.Rejected);
+                        continue;
+                    }
+
                     if (!response.IsSuccessStatusCode)
                     {
                         return ReadOutcome.FromResponse(Network, response.StatusCode, body);

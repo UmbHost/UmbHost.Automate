@@ -23,15 +23,22 @@ namespace UmbHost.Automate.Meta.Actions;
 /// (<c>reactions.summary.total_count</c>: https://developers.facebook.com/docs/graph-api/reference/object/reactions/) and
 /// <c>comments</c> (<c>comments.summary.total_count</c>: https://developers.facebook.com/docs/graph-api/reference/object/comments/).
 /// <b>UNVERIFIED:</b> whether a post nobody has shared omits <c>shares</c>; if it does, <c>shares</c> is left out rather than reported as 0.
+/// Also <b>UNVERIFIED:</b> that these counts need <c>pages_read_user_content</c> (from Meta's permissions reference, not the pages above,
+/// which name <c>pages_read_engagement</c>).
 /// </para>
 /// <para>
 /// Views: <c>GET /{post-id}/insights?metric=post_media_view</c>, the documented replacement for <c>post_impressions</c> (deprecated
-/// 2025-11-15): https://developers.facebook.com/documentation/pages-api/platforminsights/page/deprecated-metrics.md. It needs
+/// 2025-11-15): https://developers.facebook.com/documentation/pages-api/platforminsights/page/deprecated-metrics.md. <b>UNVERIFIED:</b>
+/// that page names it as the alternative for the <c>post_impressions*</c> rows, but the current Page insights reference doesn't list
+/// <c>post_media_view</c> as a post-level metric. It needs
 /// <c>read_insights</c> and <c>pages_read_engagement</c>; without <c>read_insights</c> "An empty dataset is returned"
 /// (https://developers.facebook.com/documentation/pages-api/platforminsights/page.md), which is <c>needsPermission</c> /
 /// <c>scope_missing</c>. <c>post_clicks</c> isn't read: the current docs no longer list it.
 /// </para>
-/// <para>A post is <c>ok</c> only when both calls succeed. Errors are classified by <see cref="GraphError"/> (its UNVERIFIED codes included).</para>
+/// <para>
+/// A post is <c>ok</c> only when both calls succeed. Errors are classified by <see cref="GraphError"/> (its UNVERIFIED codes included): a
+/// 4xx it doesn't otherwise classify makes that post <c>unavailable</c> / <c>rejected</c> and the rest of the batch carries on.
+/// </para>
 /// </remarks>
 [Action("meta.getFacebookPostMetrics", "Get Facebook Post Metrics",
     Description = "Reads your Facebook Page posts' views, reactions, comments and shares.",

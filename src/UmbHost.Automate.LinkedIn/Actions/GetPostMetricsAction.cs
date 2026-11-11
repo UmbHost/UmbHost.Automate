@@ -31,8 +31,9 @@ namespace UmbHost.Automate.LinkedIn.Actions;
 /// "Shares that are not returned in the list of elements can be assumed to have counts of 0 for all statistics" (same page), so an
 /// omitted post is <c>ok</c> with zeroes. A deleted post can't be told apart from one nobody has seen: it reads as zeroes too.
 /// <b>UNVERIFIED:</b> whether <c>r_organization_admin</c> alone is enough (the docs list only <c>rw_organization_admin</c>, so we ask for
-/// that), and how many URNs one call takes (not documented; we send at most 20 per call). A 403 makes that call's posts
-/// <c>needsPermission</c> / <c>scope_missing</c>.
+/// that), how many URNs one call takes (not documented; we send at most 20 per call), and the <c>ugcPosts[0]=</c> form with the
+/// Rest.li 2.0 header (as the sample shows it, but not run live). A 403 makes that call's posts <c>needsPermission</c> /
+/// <c>scope_missing</c>; any other 4xx but 401, 408 and 429 makes them <c>unavailable</c> / <c>rejected</c>, and the batch carries on.
 /// </para>
 /// </remarks>
 [Action("linkedin.getPostMetrics", "Get LinkedIn Post Metrics",
@@ -162,6 +163,17 @@ public sealed partial class GetPostMetricsAction : ActionBase<GetPostMetricsSett
                 foreach (var urn in chunk)
                 {
                     settled[urn] = PostMetricsResult.NeedsPermission(urn, PostMetricsReason.ScopeMissing);
+                }
+
+                return null;
+            }
+
+            // Any other 4xx settles this call's posts alone (e.g. if LinkedIn refuses the ugcPosts[n]= form): the batch carries on.
+            if (ReadOutcome.RejectsThePost(response.StatusCode))
+            {
+                foreach (var urn in chunk)
+                {
+                    settled[urn] = PostMetricsResult.Unavailable(urn, PostMetricsReason.Rejected);
                 }
 
                 return null;

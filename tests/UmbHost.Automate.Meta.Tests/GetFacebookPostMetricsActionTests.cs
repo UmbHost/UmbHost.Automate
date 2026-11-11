@@ -229,7 +229,6 @@ public class GetFacebookPostMetricsActionTests
     [InlineData(HttpStatusCode.BadRequest, 190, StepRunErrorCategory.Authentication)]
     [InlineData(HttpStatusCode.BadRequest, 17, StepRunErrorCategory.RateLimiting)]
     [InlineData(HttpStatusCode.InternalServerError, null, StepRunErrorCategory.ServiceUnavailable)]
-    [InlineData(HttpStatusCode.BadRequest, 100, StepRunErrorCategory.Validation)]
     public async Task rate_limited_and_server_errors_are_retriable_and_401_is_not(HttpStatusCode status, int? code, StepRunErrorCategory category)
     {
         var handler = new Mock<HttpMessageHandler>();
@@ -282,5 +281,55 @@ public class GetFacebookPostMetricsActionTests
         await Sut(handler).ExecuteAsync(Context("123_456"), cts.Token);
 
         reached.Should().BeTrue();
+    }
+
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public async Task one_rejected_post_in_three_settles_alone(bool onTheCounts)
+    {
+        var handler = new Mock<HttpMessageHandler>();
+        foreach (var id in new[] { "123_1", "123_2", "123_3" })
+        {
+            handler.SetupRequest(r => IsCounts(r, id)).ReturnsResponse(
+                onTheCounts && id == "123_2" ? HttpStatusCode.BadRequest : HttpStatusCode.OK, onTheCounts && id == "123_2" ? Error(100) : Counts(id));
+            handler.SetupRequest(r => IsViews(r, id)).ReturnsResponse(
+                !onTheCounts && id == "123_2" ? HttpStatusCode.BadRequest : HttpStatusCode.OK, !onTheCounts && id == "123_2" ? Error(100) : Views(id));
+        }
+
+        var results = Results(await Sut(handler).ExecuteAsync(Context("123_1", "123_2", "123_3"), default));
+
+        results.Select(r => (r.Id, r.State, r.Reason)).Should().Equal(("123_1", "ok", null), ("123_2", "unavailable", "rejected"), ("123_3", "ok", null));
+    }
+
+    [Fact]
+    public async Task the_cancellation_token_reaches_the_views_call()
+    {
+        using var cts = new CancellationTokenSource();
+        var handler = new Mock<HttpMessageHandler>();
+        var reached = false;
+        handler.SetupRequest(r => IsCounts(r, "123_456")).ReturnsResponse(HttpStatusCode.OK, Counts("123_456"));
+        handler.SetupRequest(r => IsViews(r, "123_456")).Returns((HttpRequestMessage _, CancellationToken ct) =>
+        {
+            cts.Cancel();
+            reached = ct.IsCancellationRequested;
+            return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK) { Content = new StringContent(Views("123_456")) });
+        });
+
+        await Sut(handler).ExecuteAsync(Context("123_456"), cts.Token);
+
+        reached.Should().BeTrue();
+    }
+
+    [Fact]
+    public async Task a_padded_true_turns_insights_on()
+    {
+        var handler = new Mock<HttpMessageHandler>();
+        handler.SetupRequest(r => IsCounts(r, "123_456")).ReturnsResponse(HttpStatusCode.OK, Counts("123_456"));
+        handler.SetupRequest(r => IsViews(r, "123_456")).ReturnsResponse(HttpStatusCode.OK, Views("123_456"));
+
+        var result = Results(await Sut(handler, " true ").ExecuteAsync(Context("123_456"), default)).Single();
+
+        result.State.Should().Be("ok");
     }
 }

@@ -59,6 +59,9 @@ internal static class PostMetricsReason
 
     /// <summary>The network answered with a redirect, which a read never follows.</summary>
     public const string Redirected = "redirected";
+
+    /// <summary>The network refused the read of this post with a 4xx no other reason covers. The rest of the batch is unaffected.</summary>
+    public const string Rejected = "rejected";
 }
 
 /// <summary>
@@ -134,6 +137,14 @@ internal static class ReadOutcome
         => cancellationToken.IsCancellationRequested
             ? ActionResult.Failed(exception, StepRunErrorCategory.Cancelled)
             : ActionResult.Failed(exception, StepRunErrorCategory.ServiceUnavailable);
+
+    /// <summary>
+    /// Whether a failed answer settles only the post (or posts) it was about, as <c>unavailable</c> / <c>rejected</c>: any 4xx except
+    /// 401 (the token), 408 and 429 (retriable). A step fails only for those, 5xx and transport failures.
+    /// </summary>
+    public static bool RejectsThePost(HttpStatusCode status)
+        => (int)status is >= 400 and < 500
+           && status is not (HttpStatusCode.Unauthorized or HttpStatusCode.RequestTimeout or HttpStatusCode.TooManyRequests);
 
     /// <summary>Whether the network answered with a redirect (3xx).</summary>
     public static bool IsRedirect(HttpStatusCode status) => (int)status is >= 300 and < 400;

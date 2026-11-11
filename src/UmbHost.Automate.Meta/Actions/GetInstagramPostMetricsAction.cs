@@ -22,14 +22,16 @@ namespace UmbHost.Automate.Meta.Actions;
 /// <c>GET /{ig-media-id}/insights?metric=views,reach,likes,comments,shares,saved,reposts&amp;period=lifetime</c>, all seven valid for
 /// feed posts and reels, needing <c>instagram_basic</c>, <c>instagram_manage_insights</c> and <c>pages_read_engagement</c>; data can be
 /// delayed up to 48 hours: https://developers.facebook.com/docs/instagram-platform/reference/instagram-media/insights. An answer with no
-/// metrics at all is <c>needsPermission</c> / <c>scope_missing</c>, as Facebook's empty dataset.
+/// metrics at all is treated as <c>needsPermission</c> / <c>scope_missing</c>, as Facebook's empty dataset. <b>UNVERIFIED:</b> the page
+/// says only that unavailable data "returns empty"; that an empty answer means a missing permission is our reading.
 /// </para>
 /// <para>
 /// "Insights data is not available for any media within an Instagram Media album" (same page). What the call answers for an album is
-/// <b>UNVERIFIED</b>, so when insights fails with an error <see cref="GraphError"/> doesn't classify, the media is looked up
+/// <b>UNVERIFIED</b>, so when insights is refused with a 4xx <see cref="GraphError"/> doesn't otherwise classify, the media is looked up
 /// (<c>GET /{ig-media-id}?fields=media_type</c>; values <c>CAROUSEL_ALBUM</c>, <c>IMAGE</c>, <c>VIDEO</c>:
 /// https://developers.facebook.com/docs/instagram-platform/reference/instagram-media). An album is <c>unavailable</c> /
-/// <c>unsupported</c>; anything else fails the step with the original error.
+/// <c>unsupported</c>; anything else, or a lookup refused with a 4xx, is <c>unavailable</c> / <c>rejected</c> for that post alone. A lookup
+/// that is throttled, unauthorised, a 5xx or a transport failure fails the step as such.
 /// </para>
 /// </remarks>
 [Action("meta.getInstagramPostMetrics", "Get Instagram Post Metrics",
@@ -84,28 +86,30 @@ public sealed partial class GetInstagramPostMetricsAction : ActionBase<GetInstag
         using var client = GraphClient.Create(_httpClientFactory, conn);
         foreach (var id in ids.Where(id => MediaId().IsMatch(id)))
         {
-            var insights = await GraphRead.GetAsync(client, Network, $"{id}/insights?metric={Metrics}&period=lifetime", cancellationToken, keepOther: true);
+            var insights = await GraphRead.GetAsync(client, Network, $"{id}/insights?metric={Metrics}&period=lifetime", cancellationToken);
             if (insights.Failure is not null)
             {
                 return insights.Failure;
             }
 
-            if (insights.Settle(id) is { } result)
+            if (insights.IsRejected)
             {
-                settled[id] = result;
+                // Albums have no insights, but what the call answers for one isn't documented: look the media up.
+                var lookup = await GraphRead.GetAsync(client, Network, $"{id}?fields=media_type", cancellationToken);
+                if (lookup.Failure is not null)
+                {
+                    return lookup.Failure;
+                }
+
+                settled[id] = lookup.Body is not null && IsAlbum(lookup.Body)
+                    ? PostMetricsResult.Unavailable(id, PostMetricsReason.Unsupported)
+                    : PostMetricsResult.Unavailable(id, PostMetricsReason.Rejected);
                 continue;
             }
 
-            if (insights.IsOther)
+            if (insights.Settle(id) is { } result)
             {
-                if (!await IsAlbumAsync(client, id, cancellationToken))
-                {
-                    return cancellationToken.IsCancellationRequested
-                        ? ActionResult.Failed(new OperationCanceledException(cancellationToken), StepRunErrorCategory.Cancelled)
-                        : GraphError.Fail(Network, GraphError.Kind.Other, insights.FailedStatus, insights.FailedBody);
-                }
-
-                settled[id] = PostMetricsResult.Unavailable(id, PostMetricsReason.Unsupported);
+                settled[id] = result;
                 continue;
             }
 
@@ -126,18 +130,12 @@ public sealed partial class GetInstagramPostMetricsAction : ActionBase<GetInstag
         return Success(new MetaPostMetricsOutput { Results = results });
     }
 
-    /// <summary>Whether the media is an album. Any failure to tell is "no", so the caller reports the original error.</summary>
-    private static async Task<bool> IsAlbumAsync(HttpClient client, string id, CancellationToken cancellationToken)
+    /// <summary>Whether a <c>media_type</c> answer names an album. An answer that can't be read isn't one.</summary>
+    private static bool IsAlbum(string body)
     {
-        var lookup = await GraphRead.GetAsync(client, Network, $"{id}?fields=media_type", cancellationToken, keepOther: true);
-        if (lookup.Body is null)
-        {
-            return false;
-        }
-
         try
         {
-            using var doc = JsonDocument.Parse(lookup.Body);
+            using var doc = JsonDocument.Parse(body);
             return doc.RootElement.ValueKind == JsonValueKind.Object
                    && doc.RootElement.TryGetProperty("media_type", out var type)
                    && type.ValueKind == JsonValueKind.String

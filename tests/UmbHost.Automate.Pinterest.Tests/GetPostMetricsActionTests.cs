@@ -257,4 +257,19 @@ public class GetPostMetricsActionTests
         seenCancelled.Should().BeTrue();
         result.ErrorCategory.Should().Be(StepRunErrorCategory.Cancelled);
     }
+
+    [Theory]
+    [InlineData(HttpStatusCode.BadRequest)]
+    [InlineData(HttpStatusCode.Conflict)]
+    public async Task one_rejected_pin_in_three_settles_alone(HttpStatusCode status)
+    {
+        var handler = new Mock<HttpMessageHandler>();
+        handler.SetupRequest(HttpMethod.Get, PinUrl("1")).ReturnsResponse(HttpStatusCode.OK, new StringContent(Pin("1").ToJsonString()));
+        handler.SetupRequest(HttpMethod.Get, PinUrl("2")).ReturnsResponse(status, Error(1, "Invalid parameters."));
+        handler.SetupRequest(HttpMethod.Get, PinUrl("3")).ReturnsResponse(HttpStatusCode.OK, new StringContent(Pin("3").ToJsonString()));
+
+        var results = Results(await Sut(handler).ExecuteAsync(Context("1", "2", "3"), default));
+
+        results.Select(r => (r.Id, r.State, r.Reason)).Should().Equal(("1", "ok", null), ("2", "unavailable", "rejected"), ("3", "ok", null));
+    }
 }

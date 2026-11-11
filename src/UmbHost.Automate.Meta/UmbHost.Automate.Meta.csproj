@@ -32,6 +32,7 @@
 
   <ItemGroup>
     <Compile Include="..\Shared\*.cs" LinkBase="Shared" />
+    <Compile Include="..\Shared\Graph\*.cs" LinkBase="Shared\Graph" />
     <InternalsVisibleTo Include="UmbHost.Automate.Meta.Tests" />
   </ItemGroup>
 

@@ -116,6 +116,7 @@ public class GetPostMetricsActionTests
     [Theory]
     [InlineData("True")]
     [InlineData("TRUE")]
+    [InlineData(" true ")]
     public async Task any_case_of_true_turns_insights_on(string insights)
     {
         var handler = new Mock<HttpMessageHandler>();
@@ -272,7 +273,6 @@ public class GetPostMetricsActionTests
     [InlineData(HttpStatusCode.ServiceUnavailable, StepRunErrorCategory.ServiceUnavailable)]
     [InlineData(HttpStatusCode.RequestTimeout, StepRunErrorCategory.ServiceUnavailable)]
     [InlineData(HttpStatusCode.Unauthorized, StepRunErrorCategory.Authentication)]
-    [InlineData(HttpStatusCode.BadRequest, StepRunErrorCategory.Validation)]
     public async Task rate_limited_and_server_errors_are_retriable_and_401_is_not(HttpStatusCode status, StepRunErrorCategory category)
     {
         var handler = new Mock<HttpMessageHandler>();
@@ -344,5 +344,22 @@ public class GetPostMetricsActionTests
         var result = await Sut(handler).ExecuteAsync(Context("urn:li:share:1"), cts.Token);
 
         result.ErrorCategory.Should().Be(StepRunErrorCategory.Cancelled);
+    }
+
+    [Theory]
+    [InlineData(HttpStatusCode.BadRequest)]
+    [InlineData(HttpStatusCode.UnprocessableEntity)]
+    public async Task a_rejected_call_settles_its_own_posts_alone(HttpStatusCode status)
+    {
+        // The ugcPosts[n]= form hasn't been run live with the Rest.li 2.0 header: if LinkedIn refuses it, only those posts are affected.
+        var handler = new Mock<HttpMessageHandler>();
+        var shares = Serve(handler, Element("urn:li:share:1"), Element("urn:li:share:3"));
+        handler.SetupRequest(HttpMethod.Get, r => IsStats(r) && r.RequestUri!.Query.Contains("ugcPosts", StringComparison.Ordinal))
+            .ReturnsResponse(status, """{"status":400,"code":"ILLEGAL_ARGUMENT","message":"Invalid param"}""");
+
+        var results = Results(await Sut(handler).ExecuteAsync(Context("urn:li:share:1", "urn:li:ugcPost:2", "urn:li:share:3"), default));
+
+        results.Select(r => (r.Id, r.State, r.Reason)).Should().Equal(
+            ("urn:li:share:1", "ok", null), ("urn:li:ugcPost:2", "unavailable", "rejected"), ("urn:li:share:3", "ok", null));
     }
 }

@@ -44,6 +44,7 @@ public class InsightsSettingTests
     [Theory]
     [InlineData("true")]
     [InlineData("True")]
+    [InlineData(" true ")]
     public void insights_on_requests_the_extra_scope(string insights)
         => Registration(insights).Scopes.Should().Contain(["w_organization_social", "r_organization_social", "rw_organization_admin"]);
 

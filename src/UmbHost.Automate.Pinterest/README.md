@@ -55,6 +55,7 @@ Output: `results`, one per id in order, each with `id`, `state`, `values` and `r
 - A Pin Pinterest can't find (404) is `gone`.
 - A Pin the account can't read (403) is `needsPermission` with reason `scope_missing`.
 - A Pin with no lifetime metrics is `unavailable` with reason `unsupported`. Pinterest only has them for video and Idea Pins created before 20 March 2023.
+- Any other 4xx for a Pin (except 401, 408 and 429) is `unavailable` with reason `rejected` for that Pin alone; the rest of the batch is still read.
 - A 401 fails the step. A 408, 429, 5xx or timeout fails it and Automate retries.
 
 Pins are read one at a time, so a 429 or 5xx part-way through a batch fails the step, and Automate's retry reads the whole batch again.

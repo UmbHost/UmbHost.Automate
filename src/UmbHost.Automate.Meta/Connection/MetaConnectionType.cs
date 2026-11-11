@@ -95,26 +95,26 @@ public sealed class MetaConnectionType : ConnectionTypeBase<MetaConnectionSettin
         }
     }
 
-    /// <summary>The permissions in <paramref name="needed"/> the token hasn't been granted; null when they can't be read.</summary>
+    /// <summary>The permissions in <paramref name="needed"/> the token hasn't been granted; null when the answer can't be read.</summary>
     private static async Task<IReadOnlyList<string>?> MissingAsync(HttpClient client, IReadOnlyList<string> needed, CancellationToken cancellationToken)
     {
+        using var response = await client.GetAsync("me/permissions", cancellationToken);
+        if (!response.IsSuccessStatusCode)
+        {
+            return null;
+        }
+
+        var body = await response.Content.ReadAsStringAsync(cancellationToken);
         try
         {
-            using var response = await client.GetAsync("me/permissions", cancellationToken);
-            if (!response.IsSuccessStatusCode)
-            {
-                return null;
-            }
-
-            using var doc = JsonDocument.Parse(await response.Content.ReadAsStringAsync(cancellationToken));
+            using var doc = JsonDocument.Parse(body);
             var granted = doc.RootElement.GetProperty("data").EnumerateArray()
                 .Where(p => p.TryGetProperty("status", out var status) && status.GetString() == "granted")
                 .Select(p => p.GetProperty("permission").GetString())
                 .ToHashSet(StringComparer.Ordinal);
             return needed.Where(p => !granted.Contains(p)).ToList();
         }
-        catch (Exception ex) when (ex is JsonException or KeyNotFoundException or InvalidOperationException or HttpRequestException
-                                       || (ex is OperationCanceledException && !cancellationToken.IsCancellationRequested))
+        catch (Exception ex) when (ex is JsonException or KeyNotFoundException or InvalidOperationException)
         {
             return null;
         }

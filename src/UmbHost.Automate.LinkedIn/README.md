@@ -66,14 +66,16 @@ Output: `results`, one per id: `state` (`ok`, `gone`, `unavailable`, `needsPermi
 { "Umbraco": { "Automate": { "Providers": { "LinkedIn": { "Insights": true } } } } }
 ```
 
-Only `true` (in any case) turns it on; anything else, or no value, leaves it off. While it's off the action sends nothing to LinkedIn and returns every id as `needsPermission` with reason `insights_off`. Turning it on adds `rw_organization_admin` to the scopes the connection asks for, so **re-authorise existing connections**. Until you do, LinkedIn answers 403 and posts come back `needsPermission` with reason `scope_missing`.
+Only `true` (in any case, surrounding spaces ignored) turns it on; anything else, or no value, leaves it off. While it's off the action sends nothing to LinkedIn and returns every id as `needsPermission` with reason `insights_off`. Turning it on adds `rw_organization_admin` to the scopes the connection asks for, so **re-authorise existing connections**. Until you do, LinkedIn answers 403 and posts come back `needsPermission` with reason `scope_missing`.
 
 Things to know:
 
 - LinkedIn leaves out posts nobody has seen or acted on, and says to treat them as zero. A **deleted post can't be told apart**: it also comes back `ok` with zeroes.
+- A 403 makes that call's posts `needsPermission` with reason `scope_missing`. Any other 4xx (except 401, 408 and 429) makes them `unavailable` with reason `rejected`, and the rest of the batch is still read. A 401 fails the step; a 408, 429, 5xx or timeout fails it and Automate retries.
 - Statistics are organic only and cover a rolling 12 months.
 - LinkedIn's data storage terms allow keeping these figures for one year.
 - Not confirmed in LinkedIn's docs:
   - whether `r_organization_admin` alone would be enough. The share statistics page lists only `rw_organization_admin`, so that's what the package asks for.
   - how many posts one call takes. The package sends at most 20 URNs per call.
+  - the `ugcPosts[0]=…` form for UGC posts, sent with the Rest.li 2.0 header as LinkedIn's sample shows it, hasn't been run against the live API. If LinkedIn refuses it, those posts come back `rejected` and share posts are unaffected.
   - the period of the Development tier's limits (500 requests per app, 100 per member).

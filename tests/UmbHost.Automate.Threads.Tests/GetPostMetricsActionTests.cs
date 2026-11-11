@@ -224,7 +224,6 @@ public class GetPostMetricsActionTests
     [InlineData(HttpStatusCode.BadRequest, 4, StepRunErrorCategory.RateLimiting)]
     [InlineData(HttpStatusCode.TooManyRequests, null, StepRunErrorCategory.RateLimiting)]
     [InlineData(HttpStatusCode.ServiceUnavailable, null, StepRunErrorCategory.ServiceUnavailable)]
-    [InlineData(HttpStatusCode.BadRequest, 100, StepRunErrorCategory.Validation)]
     public async Task rate_limited_and_server_errors_are_retriable_and_401_is_not(HttpStatusCode status, int? code, StepRunErrorCategory category)
     {
         var handler = new Mock<HttpMessageHandler>();
@@ -279,5 +278,31 @@ public class GetPostMetricsActionTests
 
         reached.Should().BeTrue();
         credentials.Verify(c => c.GetCredentialsAsync(CredentialsId, cts.Token));
+    }
+
+    [Theory]
+    [InlineData(HttpStatusCode.BadRequest, 100)]
+    [InlineData(HttpStatusCode.Conflict, null)]
+    public async Task one_rejected_post_in_three_settles_alone(HttpStatusCode status, int? code)
+    {
+        var handler = new Mock<HttpMessageHandler>();
+        handler.SetupRequest(r => IsInsights(r, "1")).ReturnsResponse(HttpStatusCode.OK, Insights("1", ("likes", 1)));
+        handler.SetupRequest(r => IsInsights(r, "2")).ReturnsResponse(status, code is null ? "{}" : Error(code.Value));
+        handler.SetupRequest(r => IsInsights(r, "3")).ReturnsResponse(HttpStatusCode.OK, Insights("3", ("likes", 3)));
+
+        var results = Results(await Sut(handler).ExecuteAsync(Context("1", "2", "3"), default));
+
+        results.Select(r => (r.Id, r.State, r.Reason)).Should().Equal(("1", "ok", null), ("2", "unavailable", "rejected"), ("3", "ok", null));
+    }
+
+    [Fact]
+    public async Task a_padded_true_turns_insights_on()
+    {
+        var handler = new Mock<HttpMessageHandler>();
+        handler.SetupRequest(IsAnyInsights).ReturnsResponse(HttpStatusCode.OK, Insights("1", ("likes", 1)));
+
+        var result = Results(await Sut(handler, insights: " true ").ExecuteAsync(Context("1"), default)).Single();
+
+        result.State.Should().Be("ok");
     }
 }
