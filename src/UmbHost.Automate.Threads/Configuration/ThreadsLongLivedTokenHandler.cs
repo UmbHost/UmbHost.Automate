@@ -1,6 +1,6 @@
-using System.Text.Json;
 using OpenIddict.Abstractions;
 using OpenIddict.Client;
+using UmbHost.Automate.Threads.Connection;
 using static OpenIddict.Client.OpenIddictClientEvents;
 using static OpenIddict.Client.OpenIddictClientHandlers;
 
@@ -51,13 +51,16 @@ public sealed class ThreadsLongLivedTokenHandler : IOpenIddictClientHandler<Proc
                 return;
             }
 
-            using var doc = JsonDocument.Parse(body);
-            context.BackchannelAccessToken = doc.RootElement.GetProperty("access_token").GetString();
-            context.BackchannelAccessTokenExpirationDate = doc.RootElement.TryGetProperty("expires_in", out var expires)
-                ? DateTimeOffset.UtcNow.AddSeconds(expires.GetInt64())
-                : null;
+            if (!ThreadsTokenAnswer.TryRead(body, out var accessToken, out var expiresIn))
+            {
+                context.Reject(OpenIddictConstants.Errors.ServerError, "Threads didn't issue a long-lived token: its answer had no usable access_token and expires_in.");
+                return;
+            }
+
+            context.BackchannelAccessToken = accessToken;
+            context.BackchannelAccessTokenExpirationDate = DateTimeOffset.UtcNow.Add(expiresIn);
         }
-        catch (Exception ex) when (ex is HttpRequestException or JsonException or KeyNotFoundException or TaskCanceledException)
+        catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException)
         {
             context.Reject(OpenIddictConstants.Errors.ServerError, "Threads didn't issue a long-lived token: " + ex.Message);
         }

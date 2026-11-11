@@ -1,4 +1,3 @@
-using System.Text.Json;
 using Umbraco.Automate.OpenIddict.Credentials;
 
 namespace UmbHost.Automate.Threads.Connection;
@@ -62,13 +61,18 @@ public sealed class ThreadsTokens
                 return credentials.AccessToken;
             }
 
-            using var doc = JsonDocument.Parse(await response.Content.ReadAsStringAsync(cancellationToken));
-            credentials.AccessToken = doc.RootElement.GetProperty("access_token").GetString()!;
+            if (!ThreadsTokenAnswer.TryRead(await response.Content.ReadAsStringAsync(cancellationToken), out var accessToken, out _))
+            {
+                // Not a token: keep the current one, which works until it lapses; the next post tries the refresh again.
+                return credentials.AccessToken;
+            }
+
+            credentials.AccessToken = accessToken;
             credentials.ExpiresUtc = null;
             await _credentialsService.UpdateCredentialsAsync(credentials, cancellationToken);
             return credentials.AccessToken;
         }
-        catch (Exception ex) when (ex is HttpRequestException or JsonException or KeyNotFoundException
+        catch (Exception ex) when (ex is HttpRequestException
                                    || (ex is TaskCanceledException && !cancellationToken.IsCancellationRequested))
         {
             return credentials.AccessToken;

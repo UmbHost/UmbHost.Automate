@@ -325,6 +325,26 @@ public class CreateThreadsPostActionTests
         threads.Tokens.Should().AllBe("THFresh");
     }
 
+    [Theory]
+    [InlineData("""{"access_token":null,"expires_in":5183944}""")]
+    [InlineData("""{"access_token":12345,"expires_in":5183944}""")]
+    [InlineData("""{"access_token":"","expires_in":5183944}""")]
+    [InlineData("""{"expires_in":5183944}""")]
+    [InlineData("""[]""")]
+    public async Task A_malformed_refresh_answer_keeps_the_current_token_and_saves_nothing(string body)
+    {
+        var threads = new FakeThreads();
+        threads.Handler.SetupRequest(HttpMethod.Get, Graph + "refresh_access_token?grant_type=th_refresh_token&access_token=THLong")
+            .ReturnsResponse(HttpStatusCode.OK, body);
+        var credentials = Credentials(TimeSpan.FromDays(8));
+
+        var result = await Sut(threads.Handler, credentials).ExecuteAsync(ActionTestHarness.Context(new CreateThreadsPostSettings { Text = "One" }, Conn), default);
+
+        result.Status.Should().Be(ActionResultStatus.Success);
+        threads.Tokens.Should().AllBe("THLong");
+        credentials.Verify(c => c.UpdateCredentialsAsync(It.IsAny<OAuthCredentials>(), It.IsAny<CancellationToken>()), Times.Never());
+    }
+
     [Fact]
     public async Task A_lapsed_token_asks_for_the_connection_to_be_authorised_again()
     {
