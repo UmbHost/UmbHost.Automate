@@ -5,6 +5,7 @@ using Umbraco.Cms.Core.Composing;
 using Umbraco.Cms.Core.DependencyInjection;
 using UmbHost.Automate.Mastodon.Actions;
 using UmbHost.Automate.Mastodon.Connection;
+using UmbHost.Automate.Mastodon.Http;
 
 namespace UmbHost.Automate.Mastodon.Configuration;
 
@@ -16,6 +17,7 @@ public sealed class MastodonComposer : IComposer
     public void Compose(IUmbracoBuilder builder)
     {
         builder.Services.AddHttpClient();
+        MastodonClient.AddPublicClient(builder.Services);
 
         builder.WithCollectionBuilder<ConnectionTypeCollectionBuilder>()
             .Add<MastodonConnectionType>();

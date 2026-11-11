@@ -36,7 +36,9 @@ Reads statuses' public counts from the connection's instance: `GET /api/v1/statu
 |---|---|
 | Ids | A JSON array of 1 to 100 status ids on the connection's instance. |
 
-Output: `results`, one per id in order, each with `id`, `state`, `values` (`favourites_count`, `reblogs_count`, `replies_count`, and `quotes_count` from 4.5.0) and `reason`. A deleted or private status is `gone` (Mastodon answers both the same way without a token). An instance in authorized-fetch mode is `unavailable` with reason `scope_missing`. A 429, 5xx or timeout fails the step and Automate retries it.
+Output: `results`, one per id in order, each with `id`, `state`, `values` (`favourites_count`, `reblogs_count`, `replies_count`, and `quotes_count` from 4.5.0) and `reason`. A deleted or private status is `gone` (Mastodon answers both the same way without a token). An instance in authorized-fetch mode is `unavailable` with reason `scope_missing`. A redirect is never followed: the ids are `unavailable` with reason `redirected`. A 408, 429, 5xx or timeout fails the step and Automate retries it.
+
+Connections are set up by site administrators. The instance URL must be the instance's real `https://` host (for example `https://mastodon.social`), not an address that redirects to it; an `http://` URL is refused as a configuration error.
 
 ## Retries
 

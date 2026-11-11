@@ -2,6 +2,8 @@ using System.Net;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using FluentAssertions;
+using Microsoft.Extensions.DependencyInjection;
+using UmbHost.Automate.Mastodon.Http;
 using Moq;
 using Moq.Contrib.HttpClient;
 using Umbraco.Automate.Core.Actions;
@@ -257,6 +259,7 @@ public class GetPostMetricsActionTests
     [InlineData(HttpStatusCode.TooManyRequests, StepRunErrorCategory.RateLimiting)]
     [InlineData(HttpStatusCode.InternalServerError, StepRunErrorCategory.ServiceUnavailable)]
     [InlineData(HttpStatusCode.ServiceUnavailable, StepRunErrorCategory.ServiceUnavailable)]
+    [InlineData(HttpStatusCode.RequestTimeout, StepRunErrorCategory.ServiceUnavailable)]
     public async Task rate_limited_and_server_errors_are_retriable(HttpStatusCode status, StepRunErrorCategory expected)
     {
         var handler = new Mock<HttpMessageHandler>();
@@ -278,5 +281,108 @@ public class GetPostMetricsActionTests
 
         result.ErrorCategory.Should().Be(StepRunErrorCategory.ConfigurationError);
         handler.VerifyAnyRequest(Times.Never());
+    }
+
+    [Theory]
+    [InlineData(HttpStatusCode.MovedPermanently)]
+    [InlineData(HttpStatusCode.Found)]
+    [InlineData(HttpStatusCode.TemporaryRedirect)]
+    [InlineData(HttpStatusCode.PermanentRedirect)]
+    public async Task a_redirect_is_unavailable_with_reason_redirected(HttpStatusCode status)
+    {
+        var handler = new Mock<HttpMessageHandler>();
+        handler.SetupRequest(HttpMethod.Get, IsBatch).ReturnsAsync(() =>
+        {
+            var response = new HttpResponseMessage(status);
+            response.Headers.Location = new Uri("https://elsewhere.example/api/v1/statuses?id[]=1");
+            return response;
+        });
+
+        var results = Results(await Sut(handler).ExecuteAsync(Context("1", "2"), default));
+
+        results.Should().HaveCount(2).And.OnlyContain(r => r.State == "unavailable" && r.Reason == "redirected");
+        handler.VerifyAnyRequest(Times.Once());
+    }
+
+    [Fact]
+    public async Task a_redirect_on_an_older_instance_single_read_is_unavailable_with_reason_redirected()
+    {
+        var handler = new Mock<HttpMessageHandler>();
+        handler.SetupRequest(HttpMethod.Get, IsBatch).ReturnsResponse(HttpStatusCode.NotFound);
+        handler.SetupRequest(HttpMethod.Get, Api + "v1/statuses/1").ReturnsResponse(HttpStatusCode.MovedPermanently);
+
+        var only = Results(await Sut(handler).ExecuteAsync(Context("1"), default)).Single();
+
+        (only.State, only.Reason).Should().Be(("unavailable", "redirected"));
+    }
+
+    [Fact]
+    public void the_public_client_does_not_follow_redirects()
+    {
+        var services = new ServiceCollection();
+        MastodonClient.AddPublicClient(services);
+        using var provider = services.BuildServiceProvider();
+
+        HttpMessageHandler handler = provider.GetRequiredService<IHttpMessageHandlerFactory>().CreateHandler(MastodonClient.PublicClientName);
+        while (handler is DelegatingHandler delegating)
+        {
+            handler = delegating.InnerHandler!;
+        }
+
+        handler.Should().BeOfType<SocketsHttpHandler>().Which.AllowAutoRedirect.Should().BeFalse();
+    }
+
+    [Fact]
+    public async Task a_2xx_body_that_is_not_json_is_an_invalid_response()
+    {
+        var handler = new Mock<HttpMessageHandler>();
+        handler.SetupRequest(HttpMethod.Get, IsBatch).ReturnsResponse(HttpStatusCode.OK, new StringContent("<html>maintenance</html>"));
+
+        var result = await Sut(handler).ExecuteAsync(Context("1"), default);
+
+        result.Status.Should().Be(ActionResultStatus.Failed);
+        result.ErrorCategory.Should().Be(StepRunErrorCategory.InvalidResponse);
+    }
+
+    [Fact]
+    public async Task a_cancelled_token_is_cancelled()
+    {
+        using var cts = new CancellationTokenSource();
+        var handler = new Mock<HttpMessageHandler>();
+        handler.SetupRequest(HttpMethod.Get, IsBatch).Returns(async (HttpRequestMessage _, CancellationToken ct) =>
+        {
+            await cts.CancelAsync();
+            ct.ThrowIfCancellationRequested();
+            return new HttpResponseMessage(HttpStatusCode.OK);
+        });
+
+        var result = await Sut(handler).ExecuteAsync(Context("1"), cts.Token);
+
+        result.Status.Should().Be(ActionResultStatus.Failed);
+        result.ErrorCategory.Should().Be(StepRunErrorCategory.Cancelled);
+    }
+
+    [Fact]
+    public async Task an_http_instance_is_a_configuration_error()
+    {
+        var handler = new Mock<HttpMessageHandler>();
+        var context = ActionTestHarness.Context(new GetPostMetricsSettings { Ids = "[\"1\"]" }, new MastodonConnectionSettings { InstanceUrl = "http://mastodon.social" });
+
+        var result = await Sut(handler).ExecuteAsync(context, default);
+
+        result.ErrorCategory.Should().Be(StepRunErrorCategory.ConfigurationError);
+        handler.VerifyAnyRequest(Times.Never());
+    }
+
+    [Fact]
+    public async Task a_status_id_with_leading_zeros_is_gone_and_never_sent()
+    {
+        var handler = new Mock<HttpMessageHandler>();
+        var requests = ServeBatch(handler);
+
+        var results = Results(await Sut(handler).ExecuteAsync(Context("0", "0123", "123"), default));
+
+        results.Select(r => r.State).Should().Equal("gone", "gone", "ok");
+        IdsOf(requests.Single()).Should().Equal("123");
     }
 }

@@ -19,6 +19,7 @@ namespace UmbHost.Automate.Mastodon.Actions;
 /// https://github.com/mastodon/mastodon/blob/main/app/policies/status_policy.rb). Without a token Mastodon answers a private
 /// status exactly as a deleted one (404, "does not exist or is private"; the batch route leaves both out), so both are
 /// <c>gone</c>. An instance in authorized-fetch mode answers 401 (or 403), which is <c>unavailable</c> with <c>scope_missing</c>.
+/// A redirect is never followed (the instance must be the real https host): it is <c>unavailable</c> with <c>redirected</c>.
 /// </para>
 /// <para>
 /// <c>GET /api/v1/statuses?id[]=</c> (4.3.0+) takes at most 20 ids: <c>DEFAULT_STATUSES_LIMIT</c> in
@@ -46,10 +47,15 @@ public sealed partial class GetPostMetricsAction : ActionBase<GetPostMetricsSett
         : base(infrastructure)
         => _httpClientFactory = httpClientFactory;
 
-    [GeneratedRegex(@"^[0-9]{1,30}$")]
+    // Mastodon ids are decimal snowflakes with no leading zero: "0123" is refused rather than sent as a different id.
+    [GeneratedRegex(@"^[1-9][0-9]{0,29}$")]
     private static partial Regex StatusId();
 
-    private static bool RequiresAuth(HttpStatusCode status) => status is HttpStatusCode.Unauthorized or HttpStatusCode.Forbidden;
+    /// <summary>Why an answer leaves the ids it covers unavailable (auth required, or a redirect), or null.</summary>
+    private static string? Unavailable(HttpStatusCode status)
+        => status is HttpStatusCode.Unauthorized or HttpStatusCode.Forbidden ? PostMetricsReason.ScopeMissing
+            : ReadOutcome.IsRedirect(status) ? PostMetricsReason.Redirected
+            : null;
 
     /// <inheritdoc />
     public override async Task<ActionResult> ExecuteAsync(ActionContext context, CancellationToken cancellationToken)
@@ -97,11 +103,11 @@ public sealed partial class GetPostMetricsAction : ActionBase<GetPostMetricsSett
                         continue;
                     }
 
-                    if (RequiresAuth(response.StatusCode))
+                    if (Unavailable(response.StatusCode) is { } reason)
                     {
                         foreach (var id in chunk)
                         {
-                            settled[id] = PostMetricsResult.Unavailable(id, PostMetricsReason.ScopeMissing);
+                            settled[id] = PostMetricsResult.Unavailable(id, reason);
                         }
 
                         continue;
@@ -125,9 +131,9 @@ public sealed partial class GetPostMetricsAction : ActionBase<GetPostMetricsSett
                         using var doc = JsonDocument.Parse(body);
                         settled[id] = PostMetricsResult.Ok(id, ReadOutcome.Counts(doc.RootElement, CountNames));
                     }
-                    else if (RequiresAuth(response.StatusCode))
+                    else if (Unavailable(response.StatusCode) is { } reason)
                     {
-                        settled[id] = PostMetricsResult.Unavailable(id, PostMetricsReason.ScopeMissing);
+                        settled[id] = PostMetricsResult.Unavailable(id, reason);
                     }
                     else if (response.StatusCode != HttpStatusCode.NotFound)
                     {

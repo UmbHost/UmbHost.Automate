@@ -53,6 +53,9 @@ internal static class PostMetricsReason
 
     /// <summary>The network has no counts for this kind of post.</summary>
     public const string Unsupported = "unsupported";
+
+    /// <summary>The network answered with a redirect, which a read never follows.</summary>
+    public const string Redirected = "redirected";
 }
 
 /// <summary>
@@ -106,7 +109,7 @@ internal static class PostMetricsIds
 /// </summary>
 internal static class ReadOutcome
 {
-    /// <summary>401 → Authentication; 429 → RateLimiting; any other 4xx → Validation; 5xx → ServiceUnavailable.</summary>
+    /// <summary>401 → Authentication; 429 → RateLimiting; 408 and 5xx → ServiceUnavailable; any other 4xx → Validation.</summary>
     public static ActionResult FromResponse(string network, HttpStatusCode status, string body)
     {
         var code = (int)status;
@@ -115,6 +118,7 @@ internal static class ReadOutcome
         {
             HttpStatusCode.Unauthorized => StepRunErrorCategory.Authentication,
             HttpStatusCode.TooManyRequests => StepRunErrorCategory.RateLimiting,
+            HttpStatusCode.RequestTimeout => StepRunErrorCategory.ServiceUnavailable,
             _ when code is >= 400 and < 500 => StepRunErrorCategory.Validation,
             _ => StepRunErrorCategory.ServiceUnavailable,
         };
@@ -127,6 +131,9 @@ internal static class ReadOutcome
         => cancellationToken.IsCancellationRequested
             ? ActionResult.Failed(exception, StepRunErrorCategory.Cancelled)
             : ActionResult.Failed(exception, StepRunErrorCategory.ServiceUnavailable);
+
+    /// <summary>Whether the network answered with a redirect (3xx).</summary>
+    public static bool IsRedirect(HttpStatusCode status) => (int)status is >= 300 and < 400;
 
     /// <summary>Whether a thrown exception is one <see cref="FromException"/> settles (a transport failure, not a bug).</summary>
     public static bool IsTransport(Exception exception)
