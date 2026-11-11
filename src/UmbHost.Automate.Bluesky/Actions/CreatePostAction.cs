@@ -182,7 +182,19 @@ public sealed class CreatePostAction : ActionBase<CreatePostSettings, CreatePost
                 ["parent"] = new JsonObject { ["uri"] = parent.Uri, ["cid"] = parent.Cid },
             };
 
-            var (posted, _, detail, unknown) = await CreateRecordAsync(client, session, part, cancellationToken);
+            Created? posted;
+            string? detail;
+            bool unknown;
+            try
+            {
+                (posted, _, detail, unknown) = await CreateRecordAsync(client, session, part, cancellationToken);
+            }
+            catch (Exception ex)
+            {
+                // Earlier parts are live: whatever went wrong, end the thread here rather than let a retry post them again.
+                (posted, detail, unknown) = (null, ex.Message, true);
+            }
+
             if (posted is null)
             {
                 return ThreadParts.PartFailed(Network, i + 2, threadParts.Count + 1, urls, detail!, unknown);
@@ -244,16 +256,17 @@ public sealed class CreatePostAction : ActionBase<CreatePostSettings, CreatePost
             {
                 return (null, PostOutcome.FromResponse(Network, response.StatusCode, body, idempotent: false), $"{Network} returned {(int)response.StatusCode}: {body}", ThreadParts.IsAmbiguous(response.StatusCode));
             }
+
+            // Read inside the try: Bluesky accepted the post, so an answer that can't be read leaves it live, never retried.
+            using var doc = JsonDocument.Parse(body);
+            var uri = doc.RootElement.TryGetProperty("uri", out var u) ? u.GetString() ?? string.Empty : string.Empty;
+            var cid = doc.RootElement.TryGetProperty("cid", out var c) ? c.GetString() ?? string.Empty : string.Empty;
+            var rkey = uri[(uri.LastIndexOf('/') + 1)..];
+            return (new Created(uri, cid, $"https://bsky.app/profile/{session.Handle}/post/{rkey}"), null, null, false);
         }
         catch (Exception ex)
         {
             return (null, PostOutcome.FromException(Network, ex, idempotent: false), ex.Message, true);
         }
-
-        using var doc = JsonDocument.Parse(body);
-        var uri = doc.RootElement.TryGetProperty("uri", out var u) ? u.GetString() ?? string.Empty : string.Empty;
-        var cid = doc.RootElement.TryGetProperty("cid", out var c) ? c.GetString() ?? string.Empty : string.Empty;
-        var rkey = uri[(uri.LastIndexOf('/') + 1)..];
-        return (new Created(uri, cid, $"https://bsky.app/profile/{session.Handle}/post/{rkey}"), null, null, false);
     }
 }

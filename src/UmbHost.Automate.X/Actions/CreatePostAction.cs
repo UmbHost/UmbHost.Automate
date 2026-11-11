@@ -113,7 +113,19 @@ public sealed class CreatePostAction : ActionBase<CreatePostSettings, CreatePost
                 ["reply"] = new JsonObject { ["in_reply_to_tweet_id"] = previousId },
             };
 
-            var (id, _, detail, unknown) = await SendAsync(client, part, cancellationToken);
+            string? id;
+            string? detail;
+            bool unknown;
+            try
+            {
+                (id, _, detail, unknown) = await SendAsync(client, part, cancellationToken);
+            }
+            catch (Exception ex)
+            {
+                // Earlier parts are live: whatever went wrong, end the thread here rather than let a retry post them again.
+                (id, detail, unknown) = (null, ex.Message, true);
+            }
+
             if (id is null)
             {
                 return ThreadParts.PartFailed(Network, i + 2, threadParts.Count + 1, urls, detail!, unknown);
@@ -142,17 +154,18 @@ public sealed class CreatePostAction : ActionBase<CreatePostSettings, CreatePost
             {
                 return (null, PostOutcome.FromResponse(Network, response.StatusCode, body, idempotent: false), $"{Network} returned {(int)response.StatusCode}: {body}", ThreadParts.IsAmbiguous(response.StatusCode));
             }
+
+            // Read inside the try: X accepted the post, so an answer that can't be read leaves it live, never retried.
+            using var doc = JsonDocument.Parse(body);
+            var id = doc.RootElement.TryGetProperty("data", out var data) && data.TryGetProperty("id", out var i)
+                ? i.GetString() ?? string.Empty
+                : string.Empty;
+            return (id, null, null, false);
         }
         catch (Exception ex)
         {
             return (null, PostOutcome.FromException(Network, ex, idempotent: false), ex.Message, true);
         }
-
-        using var doc = JsonDocument.Parse(body);
-        var id = doc.RootElement.TryGetProperty("data", out var data) && data.TryGetProperty("id", out var i)
-            ? i.GetString() ?? string.Empty
-            : string.Empty;
-        return (id, null, null, false);
     }
 
     private async Task<(string? MediaId, ActionResult? Failure)> UploadImageAsync(

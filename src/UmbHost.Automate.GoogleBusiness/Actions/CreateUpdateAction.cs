@@ -17,7 +17,8 @@ namespace UmbHost.Automate.GoogleBusiness.Actions;
 /// <para>
 /// API: <c>POST https://mybusiness.googleapis.com/v4/{accounts/*/locations/*}/localPosts</c>
 /// (https://developers.google.com/my-business/reference/rest/v4/accounts.locations.localPosts). Google fetches the image from its
-/// public URL. The summary is limited to 1,500 characters (https://support.google.com/business/answer/7390603).
+/// public URL. The summary is limited to 1,500 characters: not stated by Google (neither the localPosts reference nor the Business
+/// Profile help gives a limit); widely reported, and on the live-test backlog.
 /// </para>
 /// <para>
 /// A location that isn't verified can't post, so the location's Voice of Merchant state is read first

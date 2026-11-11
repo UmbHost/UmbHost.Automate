@@ -133,7 +133,19 @@ public sealed class CreateStatusAction : ActionBase<CreateStatusSettings, Create
             }
 
             // Each part has its own key, so a retry can't post a part twice; a failed part is still never retried.
-            var (posted, _, detail, unknown) = await SendAsync(client, part, $"{context.RunId}:{context.StepId}:{i + 1}", cancellationToken);
+            Posted? posted;
+            string? detail;
+            bool unknown;
+            try
+            {
+                (posted, _, detail, unknown) = await SendAsync(client, part, $"{context.RunId}:{context.StepId}:{i + 1}", cancellationToken);
+            }
+            catch (Exception ex)
+            {
+                // Earlier parts are live: whatever went wrong, end the thread here rather than let a retry post them again.
+                (posted, detail, unknown) = (null, ex.Message, true);
+            }
+
             if (posted is null)
             {
                 return ThreadParts.PartFailed(Network, i + 2, threadParts.Count + 1, urls, detail!, unknown);
@@ -166,16 +178,18 @@ public sealed class CreateStatusAction : ActionBase<CreateStatusSettings, Create
             {
                 return (null, PostOutcome.FromResponse(Network, response.StatusCode, body, idempotent: true), $"{Network} returned {(int)response.StatusCode}: {body}", ThreadParts.IsAmbiguous(response.StatusCode));
             }
+
+            // Read inside the try: Mastodon accepted the status, so an answer that can't be read leaves it live. A retry of the first
+            // status reuses its idempotency key; a later part ends the thread.
+            using var doc = JsonDocument.Parse(body);
+            return (new Posted(
+                doc.RootElement.TryGetProperty("id", out var id) ? id.GetString() ?? string.Empty : string.Empty,
+                doc.RootElement.TryGetProperty("url", out var url) ? url.GetString() ?? string.Empty : string.Empty), null, null, false);
         }
         catch (Exception ex)
         {
             return (null, PostOutcome.FromException(Network, ex, idempotent: true), ex.Message, true);
         }
-
-        using var doc = JsonDocument.Parse(body);
-        return (new Posted(
-            doc.RootElement.TryGetProperty("id", out var id) ? id.GetString() ?? string.Empty : string.Empty,
-            doc.RootElement.TryGetProperty("url", out var url) ? url.GetString() ?? string.Empty : string.Empty), null, null, false);
     }
 
     private async Task<(string? MediaId, ActionResult? Failure)> UploadImageAsync(

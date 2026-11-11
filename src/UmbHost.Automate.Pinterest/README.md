@@ -26,7 +26,7 @@ This package is tested against mocked Pinterest API responses only, built from P
    }
    ```
 
-   The package requests `boards:read` and `pins:write`. Access tokens last 30 days and renew automatically with the refresh token. Without a `ClientId` the provider is skipped and everything else still loads.
+   The package requests `boards:read`, `boards:write`, `pins:read` and `pins:write`, the scopes Pinterest's API description lists for creating a Pin. Access tokens last 30 days and renew automatically with the refresh token. Without a `ClientId` the provider is skipped and everything else still loads.
 4. **Automate → Connections → Create → Pinterest → Authorize.** **Validate** lists your boards as "Name (id)".
 
 ## Create Pin

@@ -1,4 +1,3 @@
-using System.Net.Http.Headers;
 using System.Text.Json;
 using Umbraco.Automate.Core.Connections;
 using Umbraco.Automate.OpenIddict.ConnectionTypes;
@@ -48,9 +47,9 @@ public sealed class ThreadsConnectionType : OAuthConnectionTypeBase<ThreadsConne
             return ConnectionValidationResult.Failure("The Threads token has expired (Threads tokens last 60 days unless they're used). Authorise the account again.", null);
         }
 
+        // access_token as a query parameter, as the Threads reference shows (https://developers.facebook.com/docs/threads/reference/publishing).
         using var client = _httpClientFactory.CreateClient();
-        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
-        using var response = await client.GetAsync("https://graph.threads.com/v1.0/me?fields=id,username", cancellationToken);
+        using var response = await client.GetAsync("https://graph.threads.com/v1.0/me?fields=id,username&access_token=" + Uri.EscapeDataString(token), cancellationToken);
         var body = await response.Content.ReadAsStringAsync(cancellationToken);
         if (!response.IsSuccessStatusCode)
         {

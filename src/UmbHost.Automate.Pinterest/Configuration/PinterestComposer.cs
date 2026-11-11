@@ -57,7 +57,9 @@ public sealed class PinterestOAuthComposer : IComposer
                 ProviderName = ProviderName,
                 ProviderDisplayName = "Pinterest",
                 Issuer = issuer,
-                Scopes = { "boards:read", "pins:write" },
+                // What POST /v5/pins requires: its security block (https://github.com/pinterest/api-description/blob/main/v5/openapi.yaml,
+                // operationId pins/create) lists all four. GET /v5/boards needs boards:read.
+                Scopes = { "boards:read", "boards:write", "pins:read", "pins:write" },
                 Configuration = new OpenIddictConfiguration
                 {
                     Issuer = issuer,

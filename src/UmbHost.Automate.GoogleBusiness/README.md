@@ -35,7 +35,7 @@ This package is tested against mocked Google Business Profile API responses only
 | Setting | Notes |
 |---|---|
 | Location | `accounts/<id>/locations/<id>`, from **Validate**. |
-| Summary | Up to 1,500 characters. |
+| Summary | Up to 1,500 characters. Google doesn't state a limit; 1,500 is the widely reported one, not yet confirmed against the live API. |
 | Link URL | Optional. Becomes the update's button. |
 | Button | `BOOK`, `ORDER`, `SHOP`, `SIGN_UP`, `LEARN_MORE` (the default) or `CALL` (calls the business's phone number; no link needed). |
 | Image URL | Optional public https URL of a JPEG or PNG; Google fetches it. |

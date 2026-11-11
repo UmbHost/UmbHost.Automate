@@ -46,7 +46,9 @@ public class OAuthRegistrationTests
         var registration = options.Registrations.Should().ContainSingle(r => r.ProviderName == "Pinterest").Subject;
         registration.ClientId.Should().Be("1234");
         registration.ClientSecret.Should().Be("shh");
-        registration.Scopes.Should().Contain(["boards:read", "pins:write", "boards:read_secret"]);
+        // The scopes POST /v5/pins requires: its security block (pinterest/api-description v5/openapi.yaml, operationId pins/create,
+        // lines 15667-15672) lists boards:read, boards:write, pins:read and pins:write.
+        registration.Scopes.Should().Contain(["boards:read", "boards:write", "pins:read", "pins:write", "boards:read_secret"]);
         registration.RedirectUri.Should().Be(new Uri("umbraco/automate/oauth/callback/pinterest", UriKind.Relative));
         registration.ConfigurationManager.Should().NotBeNull("OpenIddict accepted the static configuration");
         options.RedirectionEndpointUris.Should().Contain(new Uri("umbraco/automate/oauth/callback/pinterest", UriKind.Relative));
