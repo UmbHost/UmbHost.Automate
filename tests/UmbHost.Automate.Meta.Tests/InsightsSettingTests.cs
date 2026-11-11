@@ -107,4 +107,36 @@ public class InsightsSettingTests
         result.Status.Should().Be(ConnectionValidationStatus.Warning);
         result.Message.Should().Contain("Acme");
     }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task a_transport_failure_on_the_permissions_call_is_a_warning(bool timeout)
+    {
+        var handler = Page();
+        handler.SetupRequest(HttpMethod.Get, IsPermissions)
+            .ThrowsAsync(timeout ? new TaskCanceledException("timed out") : new HttpRequestException("connection reset"));
+
+        var result = await Sut(handler, "true").ValidateAsync(Conn, default);
+
+        result.Status.Should().Be(ConnectionValidationStatus.Warning);
+        result.Message.Should().Contain("Acme");
+    }
+
+    [Fact]
+    public async Task a_cancellation_is_still_a_cancellation()
+    {
+        using var cts = new CancellationTokenSource();
+        var handler = Page();
+        handler.SetupRequest(HttpMethod.Get, IsPermissions).Returns((HttpRequestMessage _, CancellationToken ct) =>
+        {
+            cts.Cancel();
+            ct.ThrowIfCancellationRequested();
+            return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK));
+        });
+
+        var validate = () => Sut(handler, "true").ValidateAsync(Conn, cts.Token);
+
+        await validate.Should().ThrowAsync<OperationCanceledException>();
+    }
 }

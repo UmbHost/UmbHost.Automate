@@ -89,22 +89,36 @@ public sealed class MetaConnectionType : ConnectionTypeBase<MetaConnectionSettin
                     missing),
             };
         }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is not OperationCanceledException || !cancellationToken.IsCancellationRequested)
         {
+            // The caller's own cancellation propagates; anything else is reported.
             return ConnectionValidationResult.Failure("Could not reach the Graph API.", [ex.Message]);
         }
     }
 
-    /// <summary>The permissions in <paramref name="needed"/> the token hasn't been granted; null when the answer can't be read.</summary>
+    /// <summary>
+    /// The permissions in <paramref name="needed"/> the token hasn't been granted; null when they can't be read (a failed answer, a
+    /// transport failure or timeout, or an unreadable body). The caller's own cancellation propagates.
+    /// </summary>
     private static async Task<IReadOnlyList<string>?> MissingAsync(HttpClient client, IReadOnlyList<string> needed, CancellationToken cancellationToken)
     {
-        using var response = await client.GetAsync("me/permissions", cancellationToken);
-        if (!response.IsSuccessStatusCode)
+        string body;
+        try
+        {
+            using var response = await client.GetAsync("me/permissions", cancellationToken);
+            if (!response.IsSuccessStatusCode)
+            {
+                return null;
+            }
+
+            body = await response.Content.ReadAsStringAsync(cancellationToken);
+        }
+        catch (Exception ex) when (ex is HttpRequestException
+                                   || (ex is OperationCanceledException && !cancellationToken.IsCancellationRequested))
         {
             return null;
         }
 
-        var body = await response.Content.ReadAsStringAsync(cancellationToken);
         try
         {
             using var doc = JsonDocument.Parse(body);
