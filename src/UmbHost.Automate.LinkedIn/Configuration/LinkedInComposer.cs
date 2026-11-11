@@ -5,6 +5,7 @@ using Umbraco.Cms.Core.Composing;
 using Umbraco.Cms.Core.DependencyInjection;
 using UmbHost.Automate.LinkedIn.Actions;
 using UmbHost.Automate.LinkedIn.Connection;
+using UmbHost.Automate.Social;
 
 namespace UmbHost.Automate.LinkedIn.Configuration;
 
@@ -21,13 +22,15 @@ public sealed class LinkedInComposer : IComposer
             .Add<LinkedInConnectionType>();
 
         builder.WithCollectionBuilder<ActionCollectionBuilder>()
-            .Add<CreateOrganizationPostAction>();
+            .Add<CreateOrganizationPostAction>()
+            .Add<GetPostMetricsAction>();
     }
 }
 
 /// <summary>
 /// Registers LinkedIn with OpenIddict Client WebIntegration so the connection can obtain tokens,
-/// requesting the scopes company-page posting needs on top of any configured ones.
+/// requesting the scopes company-page posting needs on top of any configured ones, plus <c>rw_organization_admin</c> for share
+/// statistics while <c>Umbraco:Automate:Providers:LinkedIn:Insights</c> is on.
 /// </summary>
 /// <remarks>
 /// Only registered when <c>Umbraco:Automate:Providers:LinkedIn:ClientId</c> is set: OpenIddict
@@ -42,8 +45,12 @@ public sealed class LinkedInOAuthComposer : IComposer
             return;
         }
 
+        string[] scopes = InsightsSwitch.IsOn(builder.Config, GetPostMetricsAction.InsightsSetting)
+            ? ["w_organization_social", "r_organization_social", "rw_organization_admin"]
+            : ["w_organization_social", "r_organization_social"];
+
         builder.Services.AddOpenIddict()
             .AddClient(options => options.UseWebProviders()
-                .AddLinkedIn(linkedIn => linkedIn.AddScopes("w_organization_social", "r_organization_social")));
+                .AddLinkedIn(linkedIn => linkedIn.AddScopes(scopes)));
     }
 }

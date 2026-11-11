@@ -22,6 +22,8 @@ public sealed class MetaComposer : IComposer
 
         builder.WithCollectionBuilder<ActionCollectionBuilder>()
             .Add<CreateFacebookPostAction>()
-            .Add<CreateInstagramPostAction>();
+            .Add<CreateInstagramPostAction>()
+            .Add<GetFacebookPostMetricsAction>()
+            .Add<GetInstagramPostMetricsAction>();
     }
 }
