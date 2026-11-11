@@ -36,3 +36,19 @@ public class ThreadFailureTailTests
     public void A_message_without_a_tail_parses_to_null()
         => ThreadParts.ParseTail("just words").Should().BeNull();
 }
+
+// Automate's `json` binding filter turns a missing value into the string "null".
+public class ThreadPartsBindingTests
+{
+    [Theory]
+    [InlineData("null")]
+    [InlineData(" null ")]
+    [InlineData("[]")]
+    public void A_null_thread_binding_is_no_thread(string json)
+    {
+        var (parts, error) = ThreadParts.Parse(json);
+
+        error.Should().BeNull();
+        parts.Should().BeEmpty();
+    }
+}

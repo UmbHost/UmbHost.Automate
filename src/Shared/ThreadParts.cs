@@ -23,10 +23,11 @@ internal static class ThreadParts
     /// <summary>The most extra parts a thread may have after the main text.</summary>
     public const int MaxExtraParts = 10;
 
-    /// <summary>Parses the setting. A blank value is no thread; an invalid one is an error message.</summary>
+    /// <summary>Parses the setting. A blank value (or <c>null</c>) is no thread; an invalid one is an error message.</summary>
     public static (IReadOnlyList<string> Parts, string? Error) Parse(string? json)
     {
-        if (string.IsNullOrWhiteSpace(json))
+        // "null" is what Automate's `json` binding filter makes of a missing value: no thread, like a blank setting.
+        if (string.IsNullOrWhiteSpace(json) || json.Trim() == "null")
         {
             return ([], null);
         }
