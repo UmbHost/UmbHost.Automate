@@ -21,7 +21,8 @@ public sealed class XComposer : IComposer
             .Add<XConnectionType>();
 
         builder.WithCollectionBuilder<ActionCollectionBuilder>()
-            .Add<CreatePostAction>();
+            .Add<CreatePostAction>()
+            .Add<GetPostMetricsAction>();
     }
 }
 

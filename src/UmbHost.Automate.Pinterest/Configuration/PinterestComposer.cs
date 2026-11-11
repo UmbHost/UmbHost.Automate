@@ -11,7 +11,7 @@ using UmbHost.Automate.Pinterest.Connection;
 namespace UmbHost.Automate.Pinterest.Configuration;
 
 /// <summary>
-/// Registers the Pinterest connection type and the Create Pin action with Umbraco Automate.
+/// Registers the Pinterest connection type and the Create Pin and Get Pinterest Pin Metrics actions with Umbraco Automate.
 /// </summary>
 public sealed class PinterestComposer : IComposer
 {
@@ -23,7 +23,8 @@ public sealed class PinterestComposer : IComposer
             .Add<PinterestConnectionType>();
 
         builder.WithCollectionBuilder<ActionCollectionBuilder>()
-            .Add<CreatePinAction>();
+            .Add<CreatePinAction>()
+            .Add<GetPostMetricsAction>();
     }
 }
 

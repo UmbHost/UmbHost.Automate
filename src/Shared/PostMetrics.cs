@@ -28,6 +28,9 @@ public sealed class PostMetricsResult
 
     internal static PostMetricsResult Unavailable(string id, string reason)
         => new() { Id = id, State = PostMetricsState.Unavailable, Reason = reason };
+
+    internal static PostMetricsResult NeedsPermission(string id, string reason)
+        => new() { Id = id, State = PostMetricsState.NeedsPermission, Reason = reason };
 }
 
 /// <summary>The states a <see cref="PostMetricsResult"/> can be in.</summary>
