@@ -69,6 +69,12 @@ public sealed class PinterestOAuthComposer : IComposer
                     ResponseTypesSupported = { OpenIddictConstants.ResponseTypes.Code },
                     ResponseModesSupported = { OpenIddictConstants.ResponseModes.Query },
                     TokenEndpointAuthMethodsSupported = { OpenIddictConstants.ClientAuthenticationMethods.ClientSecretBasic },
+                    // No CodeChallengeMethodsSupported: Pinterest documents no PKCE. Its authorisation request takes client_id,
+                    // redirect_uri, response_type, scope and state only
+                    // (https://developers.pinterest.com/docs/getting-started/set-up-authentication-and-authorization/), and its token
+                    // request takes code, grant_type, redirect_uri, refresh_token, scope and continuous_refresh, with no code_verifier
+                    // (OauthAccessTokenCreate in https://github.com/pinterest/api-description/blob/main/v5/openapi.json). A challenge
+                    // Pinterest never checks protects nothing; the client authenticates with its secret and the state is protected.
                 },
             }));
     }

@@ -77,6 +77,11 @@ public sealed class ThreadsOAuthComposer : IComposer
                         ResponseTypesSupported = { OpenIddictConstants.ResponseTypes.Code },
                         ResponseModesSupported = { OpenIddictConstants.ResponseModes.Query },
                         TokenEndpointAuthMethodsSupported = { OpenIddictConstants.ClientAuthenticationMethods.ClientSecretPost },
+                        // No CodeChallengeMethodsSupported: Threads documents no PKCE. Its authorisation window takes client_id,
+                        // redirect_uri, scope, response_type and state, and the code exchange takes client_id, client_secret (required),
+                        // code, grant_type and redirect_uri, with no code_challenge or code_verifier
+                        // (https://developers.facebook.com/docs/threads/get-started/get-access-tokens-and-permissions). A challenge
+                        // Threads never checks protects nothing; the client authenticates with its secret and the state is protected.
                     },
                 });
                 options.AddEventHandler(ThreadsLongLivedTokenHandler.Descriptor);
