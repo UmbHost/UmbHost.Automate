@@ -6,15 +6,22 @@
     "Url": "https://umbhost.net",
     "ImageUrl": "https://github.com/UmbHost.png"
   },
-  "Category": "Automation",
+  "Category": "Developer Tools",
   "Description": "Teamwork Projects connection type and actions for Umbraco Automate. Create tasks, comment, and complete/reopen tasks as part of an automation workflow.",
-  "ImageUrl": "https://github.com/UmbHost/UmbHost.Automate/blob/main/umbHostAutomateTeamwork.png",
-  "LicenseTypes": ["Free"],
+  "LicenseTypes": [
+    "Free"
+  ],
   "IssueTrackerUrl": "https://github.com/UmbHost/UmbHost.Automate/issues",
   "DocumentationUrl": "https://github.com/UmbHost/UmbHost.Automate/tree/main/src/UmbHost.Automate.Teamwork",
   "PackageType": "Package",
   "Title": "UmbHost.Automate.Teamwork",
-  "Tags": ["umbraco", "automate", "automation", "teamwork", "project-management"],
+  "Tags": [
+    "umbraco",
+    "automate",
+    "automation",
+    "teamwork",
+    "project-management"
+  ],
   "RelatedPackages": [
     {
       "PackageId": "Umbraco.Automate",

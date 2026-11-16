@@ -1,0 +1,19 @@
+<Project>
+
+  <!--
+    Patched floors for vulnerable packages that Umbraco 17.x brings in transitively, so every provider package (and its tests) resolves
+    a fixed version, and so does a site that installs one:
+    - System.Security.Cryptography.Xml / .Pkcs 10.0.13: GHSA-c399-9853-6jmj, GHSA-r955-8q5j-3h83, GHSA-7hqp-7c5m-4vq6,
+      GHSA-846f-f764-76mx, GHSA-2fmv-rv2c-59x7.
+    - MessagePack 3.1.9: GHSA-qhrr-8q5h-9q3h (and the 3.1.7 fixes).
+    - OpenTelemetry.Api 1.15.3: GHSA-g94r-2vxg-569j.
+    Raise or drop these once the Umbraco floor itself resolves patched versions.
+  -->
+  <ItemGroup>
+    <PackageReference Include="System.Security.Cryptography.Xml" Version="10.0.13" />
+    <PackageReference Include="System.Security.Cryptography.Pkcs" Version="10.0.13" />
+    <PackageReference Include="MessagePack" Version="3.1.9" />
+    <PackageReference Include="OpenTelemetry.Api" Version="1.15.3" />
+  </ItemGroup>
+
+</Project>
