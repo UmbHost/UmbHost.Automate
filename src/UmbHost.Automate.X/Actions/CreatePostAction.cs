@@ -21,7 +21,7 @@ namespace UmbHost.Automate.X.Actions;
 [Action("x.createPost", "Create X Post",
     Description = "Publishes a post to X (Twitter).",
     Group = "Social",
-    Icon = "icon-twitter",
+    Icon = "icon-twitter-x",
     ConnectionTypeAlias = "x")]
 public sealed class CreatePostAction : ActionBase<CreatePostSettings, CreatePostOutput>
 {

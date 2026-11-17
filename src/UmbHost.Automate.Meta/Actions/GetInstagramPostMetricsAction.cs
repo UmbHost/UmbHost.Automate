@@ -37,7 +37,7 @@ namespace UmbHost.Automate.Meta.Actions;
 [Action("meta.getInstagramPostMetrics", "Get Instagram Post Metrics",
     Description = "Reads your Instagram posts' views, reach, likes, comments, shares, saves and reposts.",
     Group = "Social",
-    Icon = "icon-picture",
+    Icon = "icon-umbhost-instagram",
     ConnectionTypeAlias = "meta")]
 public sealed partial class GetInstagramPostMetricsAction : ActionBase<GetInstagramPostMetricsSettings, MetaPostMetricsOutput>
 {

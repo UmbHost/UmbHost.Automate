@@ -22,7 +22,7 @@ namespace UmbHost.Automate.Pinterest.Actions;
 [Action("pinterest.createPin", "Create Pin",
     Description = "Creates a Pin on one of your Pinterest boards.",
     Group = "Social",
-    Icon = "icon-umbsocial-pinterest",
+    Icon = "icon-umbhost-pinterest",
     ConnectionTypeAlias = "pinterest")]
 public sealed partial class CreatePinAction : ActionBase<CreatePinSettings, CreatePinOutput>
 {

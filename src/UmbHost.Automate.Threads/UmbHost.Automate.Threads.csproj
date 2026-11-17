@@ -1,4 +1,4 @@
-<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk.Razor">
 
   <PropertyGroup>
     <TargetFramework>net10.0</TargetFramework>
@@ -21,6 +21,10 @@
     <GeneratePackageOnBuild>false</GeneratePackageOnBuild>
     <IncludeSymbols>true</IncludeSymbols>
     <SymbolPackageFormat>snupkg</SymbolPackageFormat>
+
+    <!-- The network's icon ships as a static web asset at /App_Plugins/UmbHost.Automate.Threads/ (Umbraco's `icons` extension):
+         Umbraco's icon set has no threads mark, and the connector shouldn't depend on another package's icons. -->
+    <StaticWebAssetBasePath>/</StaticWebAssetBasePath>
   </PropertyGroup>
 
   <!-- Umbraco.Automate.OpenIddict 17.1.5 is the release for Automate 17.5.x; it brings the IOAuthConnectionType.SetupDocsUrl link

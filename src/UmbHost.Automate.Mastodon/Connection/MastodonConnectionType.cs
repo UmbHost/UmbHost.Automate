@@ -10,7 +10,7 @@ namespace UmbHost.Automate.Mastodon.Connection;
 [ConnectionType("mastodon", "Mastodon",
     Description = "Connect to a Mastodon account using an access token",
     Group = "Social",
-    Icon = "icon-chat")]
+    Icon = "icon-mastodon")]
 public sealed class MastodonConnectionType : ConnectionTypeBase<MastodonConnectionSettings>
 {
     private readonly IHttpClientFactory _httpClientFactory;

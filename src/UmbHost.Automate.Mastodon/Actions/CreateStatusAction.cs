@@ -22,7 +22,7 @@ namespace UmbHost.Automate.Mastodon.Actions;
 [Action("mastodon.createStatus", "Create Mastodon Status",
     Description = "Publishes a status to Mastodon.",
     Group = "Social",
-    Icon = "icon-chat",
+    Icon = "icon-mastodon",
     ConnectionTypeAlias = "mastodon")]
 public sealed class CreateStatusAction : ActionBase<CreateStatusSettings, CreateStatusOutput>
 {

@@ -1,0 +1,11 @@
+{
+  "name": "UmbHost.Automate.Meta",
+  "extensions": [
+    {
+      "type": "icons",
+      "alias": "UmbHost.Automate.Meta.Icons",
+      "name": "UmbHost.Automate.Meta icons",
+      "js": "/App_Plugins/UmbHost.Automate.Meta/icons.js"
+    }
+  ]
+}

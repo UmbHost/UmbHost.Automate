@@ -1,0 +1,11 @@
+{
+  "name": "UmbHost.Automate.Threads",
+  "extensions": [
+    {
+      "type": "icons",
+      "alias": "UmbHost.Automate.Threads.Icons",
+      "name": "UmbHost.Automate.Threads icons",
+      "js": "/App_Plugins/UmbHost.Automate.Threads/icons.js"
+    }
+  ]
+}

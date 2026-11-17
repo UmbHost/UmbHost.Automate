@@ -29,7 +29,7 @@ namespace UmbHost.Automate.Threads.Actions;
 [Action("threads.getPostMetrics", "Get Threads Post Metrics",
     Description = "Reads your Threads posts' views, likes, replies, reposts, quotes and shares.",
     Group = "Social",
-    Icon = "icon-umbsocial-threads",
+    Icon = "icon-umbhost-threads",
     ConnectionTypeAlias = "threads")]
 public sealed partial class GetPostMetricsAction : ActionBase<GetPostMetricsSettings, GetPostMetricsOutput>
 {

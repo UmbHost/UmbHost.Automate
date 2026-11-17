@@ -12,7 +12,7 @@ namespace UmbHost.Automate.Threads.Connection;
 /// </summary>
 [ConnectionType("threads", "Threads",
     Group = "Social",
-    Icon = "icon-umbsocial-threads",
+    Icon = "icon-umbhost-threads",
     Description = "Connect to Threads to post as a Threads profile")]
 public sealed class ThreadsConnectionType : OAuthConnectionTypeBase<ThreadsConnectionSettings>
 {

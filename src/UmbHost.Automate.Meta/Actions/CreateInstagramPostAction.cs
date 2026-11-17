@@ -19,7 +19,7 @@ namespace UmbHost.Automate.Meta.Actions;
 [Action("meta.createInstagramPost", "Create Instagram Post",
     Description = "Publishes an image post to Instagram.",
     Group = "Social",
-    Icon = "icon-picture",
+    Icon = "icon-umbhost-instagram",
     ConnectionTypeAlias = "meta")]
 public sealed class CreateInstagramPostAction : ActionBase<CreateInstagramPostSettings, MetaPostOutput>
 {

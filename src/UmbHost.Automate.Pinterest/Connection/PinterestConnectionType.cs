@@ -13,7 +13,7 @@ namespace UmbHost.Automate.Pinterest.Connection;
 /// </summary>
 [ConnectionType("pinterest", "Pinterest",
     Group = "Social",
-    Icon = "icon-umbsocial-pinterest",
+    Icon = "icon-umbhost-pinterest",
     Description = "Connect to Pinterest to create Pins on your boards")]
 public sealed class PinterestConnectionType : OAuthConnectionTypeBase<PinterestConnectionSettings>
 {
