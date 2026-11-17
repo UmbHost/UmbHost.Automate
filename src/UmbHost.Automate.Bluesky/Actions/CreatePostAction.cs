@@ -9,6 +9,7 @@ using Umbraco.Automate.Core.Actions;
 using UmbHost.Automate.Bluesky.Connection;
 using UmbHost.Automate.Bluesky.Http;
 using UmbHost.Automate.Social;
+using Umbraco.Cms.Core.Media;
 
 namespace UmbHost.Automate.Bluesky.Actions;
 
@@ -33,15 +34,47 @@ public sealed class CreatePostAction : ActionBase<CreatePostSettings, CreatePost
 
     private readonly IHttpClientFactory _httpClientFactory;
     private readonly ImageFetcher _imageFetcher;
+    private readonly IImageDimensionExtractor? _imageDimensions;
 
+    /// <param name="imageDimensions">
+    /// Umbraco's image dimension reader (ImageSharp on a standard site, a no-op otherwise), for the image's aspect ratio. Optional so
+    /// existing callers keep working; without it, or when it can't read the image, the post goes without an aspect ratio.
+    /// </param>
     public CreatePostAction(
         ActionInfrastructure infrastructure,
         IHttpClientFactory httpClientFactory,
-        IOptionsMonitor<HttpClientFactoryOptions> httpClientOptions)
+        IOptionsMonitor<HttpClientFactoryOptions> httpClientOptions,
+        IImageDimensionExtractor? imageDimensions = null)
         : base(infrastructure)
     {
         _httpClientFactory = httpClientFactory;
         _imageFetcher = new ImageFetcher(httpClientFactory, httpClientOptions);
+        _imageDimensions = imageDimensions;
+    }
+
+    /// <summary>
+    /// The image's app.bsky.embed.defs#aspectRatio (width and height, each at least 1), or null when its size can't be read. Without one
+    /// Bluesky can't tell the image's shape and shows it letterboxed in a square frame.
+    /// </summary>
+    private JsonObject? AspectRatio(byte[] bytes)
+    {
+        if (_imageDimensions is null)
+        {
+            return null;
+        }
+
+        try
+        {
+            using var stream = new MemoryStream(bytes, writable: false);
+            return _imageDimensions.GetDimensions(stream) is { Width: >= 1, Height: >= 1 } size
+                ? new JsonObject { ["width"] = size.Width, ["height"] = size.Height }
+                : null;
+        }
+        catch (Exception)
+        {
+            // An image the reader can't parse still posts, just without the hint.
+            return null;
+        }
     }
 
     private static bool IsHttps(string? url)
@@ -134,14 +167,20 @@ public sealed class CreatePostAction : ActionBase<CreatePostSettings, CreatePost
             }
 
             var blob = JsonNode.Parse(uploadBody)!["blob"]!.DeepClone();
+            var embedded = new JsonObject
+            {
+                ["image"] = blob,
+                ["alt"] = settings.ImageAltText ?? string.Empty,
+            };
+            if (AspectRatio(image.Bytes) is { } aspectRatio)
+            {
+                embedded["aspectRatio"] = aspectRatio;
+            }
+
             record["embed"] = new JsonObject
             {
                 ["$type"] = "app.bsky.embed.images",
-                ["images"] = new JsonArray(new JsonObject
-                {
-                    ["image"] = blob,
-                    ["alt"] = settings.ImageAltText ?? string.Empty,
-                }),
+                ["images"] = new JsonArray(embedded),
             };
         }
 
