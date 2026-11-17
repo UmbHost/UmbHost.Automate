@@ -1,0 +1,11 @@
+{
+  "name": "UmbHost.Automate.Bluesky",
+  "extensions": [
+    {
+      "type": "icons",
+      "alias": "UmbHost.Automate.Bluesky.Icons",
+      "name": "UmbHost.Automate.Bluesky icons",
+      "js": "/App_Plugins/UmbHost.Automate.Bluesky/icons.js"
+    }
+  ]
+}

@@ -12,7 +12,7 @@ namespace UmbHost.Automate.X.Connection;
 /// </summary>
 [ConnectionType("x", "X (Twitter)",
     Group = "Social",
-    Icon = "icon-twitter",
+    Icon = "icon-twitter-x",
     Description = "Connect to an X account")]
 public sealed class XConnectionType : OAuthConnectionTypeBase<XConnectionSettings>
 {

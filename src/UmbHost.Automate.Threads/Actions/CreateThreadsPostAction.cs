@@ -26,7 +26,7 @@ namespace UmbHost.Automate.Threads.Actions;
 [Action("threads.createPost", "Create Threads Post",
     Description = "Publishes a post to Threads, with an optional image and further parts as a thread.",
     Group = "Social",
-    Icon = "icon-umbsocial-threads",
+    Icon = "icon-umbhost-threads",
     ConnectionTypeAlias = "threads")]
 public sealed class CreateThreadsPostAction : ActionBase<CreateThreadsPostSettings, CreateThreadsPostOutput>
 {

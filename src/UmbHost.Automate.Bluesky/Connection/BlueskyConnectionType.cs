@@ -9,7 +9,7 @@ namespace UmbHost.Automate.Bluesky.Connection;
 [ConnectionType("bluesky", "Bluesky",
     Description = "Connect to a Bluesky account using an app password",
     Group = "Social",
-    Icon = "icon-cloud")]
+    Icon = "icon-umbhost-bluesky")]
 public sealed class BlueskyConnectionType : ConnectionTypeBase<BlueskyConnectionSettings>
 {
     private readonly IHttpClientFactory _httpClientFactory;

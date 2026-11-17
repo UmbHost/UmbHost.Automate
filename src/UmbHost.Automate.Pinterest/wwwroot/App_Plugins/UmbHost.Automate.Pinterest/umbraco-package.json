@@ -1,0 +1,11 @@
+{
+  "name": "UmbHost.Automate.Pinterest",
+  "extensions": [
+    {
+      "type": "icons",
+      "alias": "UmbHost.Automate.Pinterest.Icons",
+      "name": "UmbHost.Automate.Pinterest icons",
+      "js": "/App_Plugins/UmbHost.Automate.Pinterest/icons.js"
+    }
+  ]
+}

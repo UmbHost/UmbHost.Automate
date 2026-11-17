@@ -22,7 +22,7 @@ namespace UmbHost.Automate.Bluesky.Actions;
 [Action("bluesky.createPost", "Create Bluesky Post",
     Description = "Publishes a post to Bluesky.",
     Group = "Social",
-    Icon = "icon-cloud",
+    Icon = "icon-umbhost-bluesky",
     ConnectionTypeAlias = "bluesky")]
 public sealed class CreatePostAction : ActionBase<CreatePostSettings, CreatePostOutput>
 {

@@ -1,4 +1,4 @@
-<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk.Razor">
 
   <PropertyGroup>
     <TargetFramework>net10.0</TargetFramework>
@@ -21,6 +21,10 @@
     <GeneratePackageOnBuild>false</GeneratePackageOnBuild>
     <IncludeSymbols>true</IncludeSymbols>
     <SymbolPackageFormat>snupkg</SymbolPackageFormat>
+
+    <!-- The network's icon ships as a static web asset at /App_Plugins/UmbHost.Automate.Meta/ (Umbraco's `icons` extension):
+         Umbraco's icon set has no instagram mark, and the connector shouldn't depend on another package's icons. -->
+    <StaticWebAssetBasePath>/</StaticWebAssetBasePath>
   </PropertyGroup>
 
   <!-- 17.4.0 is the first Automate release that registers its SSRF-protected outbound HTTP client,
