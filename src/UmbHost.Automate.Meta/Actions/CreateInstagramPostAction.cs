@@ -72,7 +72,7 @@ public sealed class CreateInstagramPostAction : ActionBase<CreateInstagramPostSe
         if (!containerResponse.IsSuccessStatusCode)
         {
             return MetaGraphVersion.Refused(context, Network, "media container", MetaGraphVersion.VersionOf(client), containerResponse.StatusCode, containerBody)
-                   ?? PostOutcome.FromPreparationResponse(context, Network, "media container", containerResponse.StatusCode, containerBody, graph: true);
+                   ?? PostOutcome.FromPreparationResponse(context, Network, "media container", containerResponse.StatusCode, containerBody, graph: true, headers: containerResponse.Headers);
         }
 
         string containerId;
@@ -96,7 +96,7 @@ public sealed class CreateInstagramPostAction : ActionBase<CreateInstagramPostSe
             if (!response.IsSuccessStatusCode)
             {
                 return MetaGraphVersion.Refused(context, Network, null, MetaGraphVersion.VersionOf(client), response.StatusCode, body)
-                       ?? PostOutcome.FromResponse(context, Network, response.StatusCode, body, idempotent: false, graph: true);
+                       ?? PostOutcome.FromResponse(context, Network, response.StatusCode, body, idempotent: false, graph: true, headers: response.Headers);
             }
         }
         catch (Exception ex)
@@ -134,7 +134,7 @@ public sealed class CreateInstagramPostAction : ActionBase<CreateInstagramPostSe
             if (!response.IsSuccessStatusCode)
             {
                 return MetaGraphVersion.Refused(context, Network, "media container status", MetaGraphVersion.VersionOf(client), response.StatusCode, body)
-                       ?? PostOutcome.FromPreparationResponse(context, Network, "media container status", response.StatusCode, body, graph: true);
+                       ?? PostOutcome.FromPreparationResponse(context, Network, "media container status", response.StatusCode, body, graph: true, headers: response.Headers);
             }
 
             using var doc = JsonDocument.Parse(body);

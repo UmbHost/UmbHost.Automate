@@ -94,7 +94,7 @@ public sealed partial class CreatePinAction : ActionBase<CreatePinSettings, Crea
 
             if (!response.IsSuccessStatusCode)
             {
-                return PostOutcome.FromResponse(context, Network, response.StatusCode, body, idempotent: false);
+                return PostOutcome.FromResponse(context, Network, response.StatusCode, body, idempotent: false, headers: response.Headers);
             }
         }
         catch (Exception ex)

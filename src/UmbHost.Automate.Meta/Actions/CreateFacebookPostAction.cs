@@ -72,7 +72,7 @@ public sealed class CreateFacebookPostAction : ActionBase<CreateFacebookPostSett
                 if (!response.IsSuccessStatusCode)
                 {
                     return MetaGraphVersion.Refused(context, Network, null, MetaGraphVersion.VersionOf(client), response.StatusCode, body)
-                           ?? PostOutcome.FromResponse(context, Network, response.StatusCode, body, idempotent: false, graph: true);
+                           ?? PostOutcome.FromResponse(context, Network, response.StatusCode, body, idempotent: false, graph: true, headers: response.Headers);
                 }
             }
         }

@@ -82,6 +82,13 @@ public sealed class CreatePostAction : ActionBase<CreatePostSettings, CreatePost
             return ActionResult.Failed(new ArgumentException(threadError), StepRunErrorCategory.Validation);
         }
 
+        return ThreadParts.FirstPartFailed(await PublishAsync(context, settings, threadParts, cancellationToken), threadParts.Count + 1);
+    }
+
+    /// <summary>Signs in, prepares and posts the thread. Once the first post is live, a failure is only ever <see cref="ThreadParts.PartFailed"/>.</summary>
+    private async Task<ActionResult> PublishAsync(
+        ActionContext context, CreatePostSettings settings, IReadOnlyList<string> threadParts, CancellationToken cancellationToken)
+    {
         var conn = context.Connection?.GetSettings<XConnectionSettings>();
         if (conn?.OAuthCredentialsId is not { } credentialsId)
         {
@@ -168,7 +175,7 @@ public sealed class CreatePostAction : ActionBase<CreatePostSettings, CreatePost
             body = await response.Content.ReadAsStringAsync(cancellationToken);
             if (!response.IsSuccessStatusCode)
             {
-                return (null, PostOutcome.FromResponse(context, Network, response.StatusCode, body, idempotent: false), NetworkError.Plain(Network, null, response.StatusCode, body), ThreadParts.IsAmbiguous(response.StatusCode));
+                return (null, PostOutcome.FromResponse(context, Network, response.StatusCode, body, idempotent: false, headers: response.Headers), NetworkError.Plain(Network, null, response.StatusCode, body), ThreadParts.IsAmbiguous(response.StatusCode));
             }
 
             // Read inside the try: X accepted the post, so an answer that can't be read leaves it live, never retried.
@@ -224,7 +231,7 @@ public sealed class CreatePostAction : ActionBase<CreatePostSettings, CreatePost
             var uploadBody = await upload.Content.ReadAsStringAsync(cancellationToken);
             if (!upload.IsSuccessStatusCode)
             {
-                return (null, PostOutcome.FromPreparationResponse(context, Network, "image upload", upload.StatusCode, uploadBody));
+                return (null, PostOutcome.FromPreparationResponse(context, Network, "image upload", upload.StatusCode, uploadBody, headers: upload.Headers));
             }
 
             using var doc = JsonDocument.Parse(uploadBody);
@@ -240,7 +247,7 @@ public sealed class CreatePostAction : ActionBase<CreatePostSettings, CreatePost
             if (!alt.IsSuccessStatusCode)
             {
                 return (null, PostOutcome.FromPreparationResponse(context,
-                    Network, "image alt text", alt.StatusCode, await alt.Content.ReadAsStringAsync(cancellationToken)));
+                    Network, "image alt text", alt.StatusCode, await alt.Content.ReadAsStringAsync(cancellationToken), headers: alt.Headers));
             }
         }
 
@@ -266,7 +273,7 @@ public sealed class CreatePostAction : ActionBase<CreatePostSettings, CreatePost
             var initBody = await init.Content.ReadAsStringAsync(cancellationToken);
             if (!init.IsSuccessStatusCode)
             {
-                return (null, PostOutcome.FromPreparationResponse(context, Network, "GIF upload", init.StatusCode, initBody));
+                return (null, PostOutcome.FromPreparationResponse(context, Network, "GIF upload", init.StatusCode, initBody, headers: init.Headers));
             }
 
             using var doc = JsonDocument.Parse(initBody);
@@ -286,7 +293,7 @@ public sealed class CreatePostAction : ActionBase<CreatePostSettings, CreatePost
             if (!append.IsSuccessStatusCode)
             {
                 return (null, PostOutcome.FromPreparationResponse(context, Network, "GIF upload", append.StatusCode,
-                    await append.Content.ReadAsStringAsync(cancellationToken)));
+                    await append.Content.ReadAsStringAsync(cancellationToken), headers: append.Headers));
             }
         }
 
@@ -296,7 +303,7 @@ public sealed class CreatePostAction : ActionBase<CreatePostSettings, CreatePost
             finalizeBody = await finalize.Content.ReadAsStringAsync(cancellationToken);
             if (!finalize.IsSuccessStatusCode)
             {
-                return (null, PostOutcome.FromPreparationResponse(context, Network, "GIF upload", finalize.StatusCode, finalizeBody));
+                return (null, PostOutcome.FromPreparationResponse(context, Network, "GIF upload", finalize.StatusCode, finalizeBody, headers: finalize.Headers));
             }
         }
 
@@ -314,7 +321,7 @@ public sealed class CreatePostAction : ActionBase<CreatePostSettings, CreatePost
             var statusBody = await status.Content.ReadAsStringAsync(cancellationToken);
             if (!status.IsSuccessStatusCode)
             {
-                return (null, PostOutcome.FromPreparationResponse(context, Network, "GIF processing check", status.StatusCode, statusBody));
+                return (null, PostOutcome.FromPreparationResponse(context, Network, "GIF processing check", status.StatusCode, statusBody, headers: status.Headers));
             }
 
             processing = Processing(statusBody);

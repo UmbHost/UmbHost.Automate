@@ -131,7 +131,8 @@ public sealed partial class PostCardAction : ActionBase<PostCardSettings, PostCa
             }
 
             // The detail stands in for the body: PostOutcome decides the category and the "may have posted" wording.
-            return PostOutcome.FromResponse(Network, status, detail, idempotent: false);
+            // The headers carry Retry-After on a 429, so a throttled Workflow says when to try again.
+            return PostOutcome.FromResponse(context, Network, status, detail, idempotent: false, headers: response.Headers);
         }
     }
 

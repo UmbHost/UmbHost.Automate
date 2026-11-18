@@ -137,7 +137,7 @@ internal sealed class LinkedInPostPublisher
                     string.Empty,
                     null,
                     LinkedInApiVersion.Refused(context, null, LinkedInClient.VersionOf(client), response.StatusCode, body)
-                    ?? PostOutcome.FromResponse(context, Network, response.StatusCode, body, idempotent: false));
+                    ?? PostOutcome.FromResponse(context, Network, response.StatusCode, body, idempotent: false, headers: response.Headers));
             }
 
             // 201 with an empty body; the new post's URN is in a header.
@@ -209,7 +209,7 @@ internal sealed class LinkedInPostPublisher
         if (!init.IsSuccessStatusCode)
         {
             return (null, LinkedInApiVersion.Refused(context, "image registration", LinkedInClient.VersionOf(client), init.StatusCode, initBody)
-                ?? PostOutcome.FromPreparationResponse(context, Network, "image registration", init.StatusCode, initBody));
+                ?? PostOutcome.FromPreparationResponse(context, Network, "image registration", init.StatusCode, initBody, headers: init.Headers));
         }
 
         string uploadUrl, imageUrn;
@@ -227,7 +227,7 @@ internal sealed class LinkedInPostPublisher
             if (!uploaded.IsSuccessStatusCode)
             {
                 return (null, PostOutcome.FromPreparationResponse(context,
-                    Network, "image upload", uploaded.StatusCode, await uploaded.Content.ReadAsStringAsync(cancellationToken)));
+                    Network, "image upload", uploaded.StatusCode, await uploaded.Content.ReadAsStringAsync(cancellationToken), headers: uploaded.Headers));
             }
         }
 
@@ -251,7 +251,7 @@ internal sealed class LinkedInPostPublisher
             if (!check.IsSuccessStatusCode)
             {
                 return (null, LinkedInApiVersion.Refused(context, "image status", LinkedInClient.VersionOf(client), check.StatusCode, body)
-                    ?? PostOutcome.FromPreparationResponse(context, Network, "image status", check.StatusCode, body));
+                    ?? PostOutcome.FromPreparationResponse(context, Network, "image status", check.StatusCode, body, headers: check.Headers));
             }
 
             using var doc = JsonDocument.Parse(body);

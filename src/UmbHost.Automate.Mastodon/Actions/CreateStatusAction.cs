@@ -76,6 +76,13 @@ public sealed class CreateStatusAction : ActionBase<CreateStatusSettings, Create
             return ActionResult.Failed(new ArgumentException(threadError), StepRunErrorCategory.Validation);
         }
 
+        return ThreadParts.FirstPartFailed(await PublishAsync(context, settings, visibility, threadParts, cancellationToken), threadParts.Count + 1);
+    }
+
+    /// <summary>Prepares and posts the thread. Once the first post is live, a failure is only ever <see cref="ThreadParts.PartFailed"/>.</summary>
+    private async Task<ActionResult> PublishAsync(
+        ActionContext context, CreateStatusSettings settings, string visibility, IReadOnlyList<string> threadParts, CancellationToken cancellationToken)
+    {
         var conn = context.Connection?.GetSettings<MastodonConnectionSettings>();
         if (conn is null || string.IsNullOrWhiteSpace(conn.InstanceUrl) || string.IsNullOrWhiteSpace(conn.AccessToken))
         {
@@ -176,7 +183,7 @@ public sealed class CreateStatusAction : ActionBase<CreateStatusSettings, Create
             body = await response.Content.ReadAsStringAsync(cancellationToken);
             if (!response.IsSuccessStatusCode)
             {
-                return (null, PostOutcome.FromResponse(context, Network, response.StatusCode, body, idempotent: true), NetworkError.Plain(Network, null, response.StatusCode, body), ThreadParts.IsAmbiguous(response.StatusCode));
+                return (null, PostOutcome.FromResponse(context, Network, response.StatusCode, body, idempotent: true, headers: response.Headers), NetworkError.Plain(Network, null, response.StatusCode, body), ThreadParts.IsAmbiguous(response.StatusCode));
             }
 
             // Read inside the try: Mastodon accepted the status, so an answer that can't be read leaves it live. A retry of the first
@@ -214,7 +221,7 @@ public sealed class CreateStatusAction : ActionBase<CreateStatusSettings, Create
         var uploadBody = await upload.Content.ReadAsStringAsync(cancellationToken);
         if (!upload.IsSuccessStatusCode)
         {
-            return (null, PostOutcome.FromPreparationResponse(context, Network, "image upload", upload.StatusCode, uploadBody));
+            return (null, PostOutcome.FromPreparationResponse(context, Network, "image upload", upload.StatusCode, uploadBody, headers: upload.Headers));
         }
 
         string mediaId;
@@ -245,7 +252,7 @@ public sealed class CreateStatusAction : ActionBase<CreateStatusSettings, Create
                 if (check.StatusCode != HttpStatusCode.PartialContent)
                 {
                     return (null, PostOutcome.FromPreparationResponse(context,
-                        Network, "image processing", check.StatusCode, await check.Content.ReadAsStringAsync(cancellationToken)));
+                        Network, "image processing", check.StatusCode, await check.Content.ReadAsStringAsync(cancellationToken), headers: check.Headers));
                 }
             }
         }

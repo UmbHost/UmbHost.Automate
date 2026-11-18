@@ -14,8 +14,15 @@ namespace UmbHost.Automate.Social;
 /// </para>
 /// <para>
 /// A thread is published only when every part is. If a later part fails the step fails with a
-/// terminal error that names the part (1-based) and lists the URLs already posted. It is never
-/// retried, because the earlier parts would post a second time.
+/// terminal error (ConfigurationError) that names the part (1-based) and lists the URLs already posted.
+/// It is never retried, because the earlier parts would post a second time.
+/// </para>
+/// <para>
+/// If the network refuses the thread before anything is live (the first part, or a request before it:
+/// sign-in, image upload, container) with Validation, Authentication or RateLimiting, the failure keeps
+/// its category and sentence and gains the same machine line naming part 1 with nothing posted
+/// (<see cref="FirstPartFailed"/>), so UmbSocial knows the thread was not published. A rate limit's
+/// <see cref="RateLimitReset"/> line, when there is one, comes before it.
 /// </para>
 /// </remarks>
 internal static class ThreadParts
@@ -92,6 +99,42 @@ internal static class ThreadParts
                 failedPartUnknown,
             });
         return ActionResult.Failed(new InvalidOperationException(message), StepRunErrorCategory.ConfigurationError);
+    }
+
+    /// <summary>
+    /// A thread's failure before anything was live, given the machine line for part 1 with nothing posted, so UmbSocial can tell the
+    /// thread was not published. Only for the definite refusals (Validation, Authentication, RateLimiting): the category, the exception's
+    /// kind and its sentence stay as they are, and the line goes last. Anything else (a success, another category, a message that already
+    /// has a line, or no thread) is returned unchanged.
+    /// </summary>
+    /// <param name="totalParts">Parts including the main text; below 2 there is no thread.</param>
+    public static ActionResult FirstPartFailed(ActionResult result, int totalParts)
+    {
+        if (totalParts < 2
+            || result.Status != ActionResultStatus.Failed
+            || result.ErrorCategory is not (StepRunErrorCategory.Validation or StepRunErrorCategory.Authentication or StepRunErrorCategory.RateLimiting)
+            || result.Exception is not { } original
+            || original.Message.Contains(TailPrefix, StringComparison.Ordinal))
+        {
+            return result;
+        }
+
+        var message = original.Message + "\n" + TailPrefix + JsonSerializer.Serialize(new
+        {
+            failedPart = 1,
+            total = totalParts,
+            posted = Array.Empty<string>(),
+            failedPartUnknown = false,
+        });
+        Exception kept = original switch
+        {
+            UnauthorizedAccessException => new UnauthorizedAccessException(message, original),
+            HttpRequestException => new HttpRequestException(message, original),
+            ArgumentException => new ArgumentException(message, original),
+            TimeoutException => new TimeoutException(message, original),
+            _ => new InvalidOperationException(message, original),
+        };
+        return ActionResult.Failed(kept, result.ErrorCategory.Value);
     }
 
     /// <summary>Reads the machine line from a failure message, or null when there is none.</summary>

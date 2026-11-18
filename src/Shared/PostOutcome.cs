@@ -1,4 +1,5 @@
 using System.Net;
+using System.Net.Http.Headers;
 using Umbraco.Automate.Core.Actions;
 
 namespace UmbHost.Automate.Social;
@@ -22,6 +23,11 @@ namespace UmbHost.Automate.Social;
 /// honour an idempotency key this is retried; otherwise it is reported as terminal with a message
 /// telling the operator to check the account before re-running.</item>
 /// </list>
+/// <para>
+/// A RateLimiting failure whose answer says when the limit resets (see <see cref="RateLimitReset"/> for what each network sends) carries
+/// one machine line after the sentence: <c>UMBSOCIAL-RETRY-AT {"retryAtUtc":"2026-11-18T14:05:00Z"}</c> (UTC, seconds). No reset time
+/// in the answer, no line. The exception type and the category stay as they are.
+/// </para>
 /// </remarks>
 internal static class PostOutcome
 {
@@ -33,8 +39,11 @@ internal static class PostOutcome
     /// Builds the failure for a non-success response from the create-post request. The step's error is the network's own words
     /// (<see cref="NetworkError.Plain"/>); the whole answer goes to the step's log. With <paramref name="graph"/> (Facebook, Instagram,
     /// Threads), a Graph error code settles the category where the status alone can't (Graph answers an expired token with 400).
+    /// Pass the answer's <paramref name="headers"/> so a rate limit's reset time reaches UmbSocial.
     /// </summary>
-    public static ActionResult FromResponse(ActionContext? context, string network, HttpStatusCode status, string body, bool idempotent, bool graph = false)
+    public static ActionResult FromResponse(
+        ActionContext? context, string network, HttpStatusCode status, string body, bool idempotent, bool graph = false,
+        HttpResponseHeaders? headers = null, TimeProvider? clock = null)
     {
         var code = (int)status;
         NetworkError.Log(context, network, null, status, body);
@@ -43,7 +52,9 @@ internal static class PostOutcome
         if (graph && code is >= 400 and < 500 && GraphCategory(body) is { } category)
         {
             return ActionResult.Failed(
-                category == StepRunErrorCategory.Authentication ? new UnauthorizedAccessException(detail) : new HttpRequestException(detail),
+                category == StepRunErrorCategory.Authentication
+                    ? new UnauthorizedAccessException(detail)
+                    : new HttpRequestException(WithRetryAt(detail, category, network, headers, body, clock)),
                 category);
         }
 
@@ -54,7 +65,9 @@ internal static class PostOutcome
 
         if (status == HttpStatusCode.TooManyRequests)
         {
-            return ActionResult.Failed(new HttpRequestException(detail), StepRunErrorCategory.RateLimiting);
+            return ActionResult.Failed(
+                new HttpRequestException(WithRetryAt(detail, StepRunErrorCategory.RateLimiting, network, headers, body, clock)),
+                StepRunErrorCategory.RateLimiting);
         }
 
         if (code is >= 400 and < 500)
@@ -82,9 +95,12 @@ internal static class PostOutcome
 
     /// <summary>
     /// Builds the failure for a request made before the post itself (sign-in, media upload).
-    /// Nothing has been published yet, so transient failures are safe to retry.
+    /// Nothing has been published yet, so transient failures are safe to retry. Pass the answer's <paramref name="headers"/> so a rate
+    /// limit's reset time reaches UmbSocial.
     /// </summary>
-    public static ActionResult FromPreparationResponse(ActionContext? context, string network, string stage, HttpStatusCode status, string body, bool graph = false)
+    public static ActionResult FromPreparationResponse(
+        ActionContext? context, string network, string stage, HttpStatusCode status, string body, bool graph = false,
+        HttpResponseHeaders? headers = null, TimeProvider? clock = null)
     {
         var code = (int)status;
         NetworkError.Log(context, network, stage, status, body);
@@ -97,8 +113,16 @@ internal static class PostOutcome
             _ => StepRunErrorCategory.ServiceUnavailable,
         };
 
-        return ActionResult.Failed(new HttpRequestException(detail), category);
+        return ActionResult.Failed(new HttpRequestException(WithRetryAt(detail, category, network, headers, body, clock)), category);
     }
+
+    /// <summary>The sentence, plus the <see cref="RateLimitReset"/> line when this is a rate limit whose answer says when it resets.</summary>
+    private static string WithRetryAt(
+        string detail, StepRunErrorCategory category, string network, HttpResponseHeaders? headers, string body, TimeProvider? clock)
+        => category == StepRunErrorCategory.RateLimiting
+           && RateLimitReset.Find(network, headers, body, (clock ?? TimeProvider.System).GetUtcNow()) is { } retryAt
+            ? detail + RateLimitReset.Tail(retryAt)
+            : detail;
 
     /// <summary>
     /// The category a Graph error code means, or null to go by the status. From
