@@ -48,12 +48,12 @@ public class ApiVersionTests
     [InlineData("Oct 26")]
     [InlineData("２０２６１０")] // full-width digits aren't \d here
     public void A_malformed_version_is_refused_with_the_form_to_use(string value)
-        => LinkedInApiVersion.Problem(value, Today).Should().Be("Use the form YYYYMM, e.g. 202610.");
+        => LinkedInApiVersion.Problem(value, Today).Should().Be("Use the form YYYYMM, e.g. 202611.");
 
     [Fact]
     public void A_version_after_this_month_is_refused()
         => LinkedInApiVersion.Problem("202612", Today).Should()
-            .Be("API Version 202612 is in the future: LinkedIn only has versions up to this month. Use the form YYYYMM, e.g. 202610.");
+            .Be("API Version 202612 is in the future: LinkedIn only has versions up to this month. Use the form YYYYMM, e.g. 202611.");
 
     [Fact]
     public void The_month_boundary_is_UTC()
@@ -77,7 +77,7 @@ public class ApiVersionTests
         var results = new List<ValidationResult>();
         Validator.TryValidateProperty(settings.ApiVersion, new ValidationContext(settings) { MemberName = "ApiVersion" }, results)
             .Should().BeFalse();
-        results.Single().ErrorMessage.Should().Be("Use the form YYYYMM, e.g. 202610.");
+        results.Single().ErrorMessage.Should().Be("Use the form YYYYMM, e.g. 202611.");
 
         Validator.TryValidateProperty(null, new ValidationContext(settings) { MemberName = "ApiVersion" }, results = []).Should().BeTrue();
     }
@@ -104,8 +104,8 @@ public class ApiVersionTests
             // The backoffice seeds a field with DefaultValue and saves it: null keeps a new connection on "the current default".
             field.DefaultValue.Should().BeNull();
             field.IsRequired.Should().BeFalse();
-            field.EditorConfig.Should().Be("""[{ "alias": "placeholder", "value": "202610" }]""");
-            field.Description.Should().Contain("Leave empty to use the connector's current default (202610)");
+            field.EditorConfig.Should().Be("""[{ "alias": "placeholder", "value": "202611" }]""");
+            field.Description.Should().Contain("Leave empty to use the connector's current default (202611)");
         }
     }
 
@@ -118,7 +118,7 @@ public class ApiVersionTests
         await Org(handler).ValidateAsync(new LinkedInConnectionSettings { OAuthCredentialsId = CredentialsId }, default);
         await Org(handler).ValidateAsync(new LinkedInConnectionSettings { OAuthCredentialsId = CredentialsId, ApiVersion = "202601" }, default);
 
-        handler.VerifyRequest(HttpMethod.Get, Acls, r => r.Headers.GetValues("LinkedIn-Version").Single() == "202610", Times.Once());
+        handler.VerifyRequest(HttpMethod.Get, Acls, r => r.Headers.GetValues("LinkedIn-Version").Single() == "202611", Times.Once());
         handler.VerifyRequest(HttpMethod.Get, Acls, r => r.Headers.GetValues("LinkedIn-Version").Single() == "202601", Times.Once());
     }
 
@@ -136,7 +136,7 @@ public class ApiVersionTests
     [Fact]
     public void The_warning_names_the_connectors_default_while_it_is_recent()
         => LinkedInApiVersion.StaleWarning("202512", Today).Should().Be(
-            "API Version 202512 is 11 months old. LinkedIn retires API versions about a year after release; move to a newer one (e.g. 202610).");
+            "API Version 202512 is 11 months old. LinkedIn retires API versions about a year after release; move to a newer one (e.g. 202611).");
 
     [Fact]
     public void Once_the_default_itself_is_old_the_warning_names_last_month()
@@ -144,7 +144,7 @@ public class ApiVersionTests
         var later = FixedClock.At(2027, 10, 5).GetUtcNow();
 
         LinkedInApiVersion.StaleWarning(null, later).Should().Be(
-            "API Version 202610 is 12 months old. LinkedIn retires API versions about a year after release; move to a newer one (e.g. 202709).");
+            "API Version 202611 is 11 months old. LinkedIn retires API versions about a year after release; move to a newer one (e.g. 202709).");
     }
 
     [Fact]
@@ -162,7 +162,7 @@ public class ApiVersionTests
         result.Status.Should().Be(ConnectionValidationStatus.Warning);
         result.Message.Should().Be(
             "LinkedIn is connected. Can post as:\nNorthwind (2414183)\n" +
-            "API Version 202512 is 11 months old. LinkedIn retires API versions about a year after release; move to a newer one (e.g. 202610).");
+            "API Version 202512 is 11 months old. LinkedIn retires API versions about a year after release; move to a newer one (e.g. 202611).");
     }
 
     [Fact]
@@ -187,7 +187,7 @@ public class ApiVersionTests
             new LinkedInConnectionSettings { OAuthCredentialsId = CredentialsId, ApiVersion = "10/2026" }, default);
 
         result.Status.Should().Be(ConnectionValidationStatus.Failure);
-        result.Message.Should().Be("Use the form YYYYMM, e.g. 202610.");
+        result.Message.Should().Be("Use the form YYYYMM, e.g. 202611.");
         handler.VerifyAnyRequest(Times.Never());
     }
 
@@ -247,7 +247,7 @@ public class ApiVersionTests
             new LinkedInConnectionSettings { OAuthCredentialsId = CredentialsId }), default);
 
         result.ErrorCategory.Should().Be(StepRunErrorCategory.Validation);
-        result.Exception!.Message.Should().Be("LinkedIn no longer supports API version 202610. Set a newer version in the connection's API Version.");
+        result.Exception!.Message.Should().Be("LinkedIn no longer supports API version 202611. Set a newer version in the connection's API Version.");
         handler.VerifyRequest(HttpMethod.Post, Rest + "posts", Times.Never());
     }
 

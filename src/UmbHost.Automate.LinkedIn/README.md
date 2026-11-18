@@ -39,8 +39,8 @@ LinkedIn access tokens last **60 days**, and LinkedIn only issues refresh tokens
 
 LinkedIn requires a `LinkedIn-Version` header (YYYYMM). It [publishes a version every month and supports each for a minimum of one year](https://learn.microsoft.com/en-us/linkedin/marketing/versioning), then retires it. Both connections (company page and profile) have an **API Version** setting:
 
-- **Leave it empty** (the default) to use the connector's current version, `202610` in this release. It moves forward when you update the package, so an empty setting never goes stale on its own.
-- **Or enter a version** such as `202610` to pin it. It must be YYYYMM with a month from 01 to 12, and not after the current month. A pinned version stays as you set it, including connections saved by earlier releases (which stored the default of the day): moving it on is up to you.
+- **Leave it empty** (the default) to use the connector's current version, `202611` in this release. It moves forward when you update the package, so an empty setting never goes stale on its own.
+- **Or enter a version** such as `202611` to pin it. It must be YYYYMM with a month from 01 to 12, and not after the current month. A pinned version stays as you set it, including connections saved by earlier releases (which stored the default of the day): moving it on is up to you.
 - **Test connection** checks the form first (Automate's settings validation runs there, because Test connection saves and then resolves the settings). It warns, while still connecting, once the version is more than 10 months old, and suggests a newer one.
 - When LinkedIn refuses the version, it answers `426` with `"code": "NONEXISTENT_VERSION"` and "Requested version … is not active" ([error responses, example 5](https://learn.microsoft.com/en-us/linkedin/marketing/error-responses)). The step then fails as a **Validation** error, not retried, saying "LinkedIn no longer supports API version 202410. Set a newer version in the connection's API Version." A missing version (`400 VERSION_MISSING`) reads the same way.
 

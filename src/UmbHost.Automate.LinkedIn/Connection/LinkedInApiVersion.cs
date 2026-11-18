@@ -27,7 +27,7 @@ internal static partial class LinkedInApiVersion
     /// The version the connector sends when a connection leaves API Version empty. Moved forward with each release, so a connection
     /// left empty follows it; one that names a version keeps it.
     /// </summary>
-    public const string Default = "202610";
+    public const string Default = "202611";
 
     /// <summary>Older than this many months, Test connection warns: LinkedIn supports a version for a year, so this leaves two.</summary>
     public const int WarnAfterMonths = 10;
