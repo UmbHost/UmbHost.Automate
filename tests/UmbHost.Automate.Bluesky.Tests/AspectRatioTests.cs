@@ -117,7 +117,7 @@ public class AspectRatioTests
     {
         var handler = new Mock<HttpMessageHandler>();
         handler.SetupRequest(HttpMethod.Post, Pds + "com.atproto.server.createSession")
-               .ReturnsResponse(HttpStatusCode.Unauthorized, new StringContent("""{"error":"AuthenticationRequired","message":"Invalid identifier or password"}"""));
+               .ReturnsResponse(HttpStatusCode.Unauthorized, new StringContent(LiveFixture.Text("error-401-sign-in")));
 
         var sut = new CreatePostAction(ActionTestHarness.Infrastructure, handler.CreateClientFactory(), SocialTestHarness.Options());
         var context = ActionTestHarness.Context(new CreatePostSettings { Text = "Hello" }, Conn);

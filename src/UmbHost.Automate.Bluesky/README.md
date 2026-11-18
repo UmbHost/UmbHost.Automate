@@ -4,6 +4,8 @@ Bluesky connection and **Create Bluesky Post** and **Get Bluesky Post Metrics** 
 
 Requires Umbraco Automate 17.4+ / 18.4+ and Umbraco CMS 17.6+.
 
+**Checked live** on 2026-11-17: a text post, an image with alt text, a link card (its facet's byte offsets past an em dash), a two-part thread, a scheduled post, a wrong app password refused at sign-in (401, shown as "Invalid identifier or password") and then retried, and the metrics read from the public AppView (all five counts). The records the connector sends match what Bluesky stored, and the tests use those replies (`tests/UmbHost.Automate.Bluesky.Tests/Fixtures/Live`).
+
 ## Setup
 
 1. In Bluesky, create an app password: **Settings → Privacy and security → App passwords**. Never use the account password.
