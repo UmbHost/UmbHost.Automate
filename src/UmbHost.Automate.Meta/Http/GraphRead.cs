@@ -1,4 +1,5 @@
 using Umbraco.Automate.Core.Actions;
+using UmbHost.Automate.Meta.Connection;
 using UmbHost.Automate.Social;
 
 namespace UmbHost.Automate.Meta.Http;
@@ -43,6 +44,12 @@ internal sealed class GraphRead
             if (response.IsSuccessStatusCode)
             {
                 return new GraphRead { Body = body };
+            }
+
+            // A deprecated version is the whole step's (the admin must move it on), not each post's.
+            if (MetaGraphVersion.Refused(context, network, "metrics", MetaGraphVersion.VersionOf(client), response.StatusCode, body) is { } refused)
+            {
+                return new GraphRead { Failure = refused };
             }
 
             var kind = GraphError.Classify(response.StatusCode, body);

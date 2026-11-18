@@ -51,16 +51,30 @@ public sealed class MetaConnectionType : ConnectionTypeBase<MetaConnectionSettin
             return ConnectionValidationResult.Failure("A Page ID and Page access token are required.");
         }
 
+        if (MetaGraphVersion.Problem(typed.GraphVersion) is { } problem)
+        {
+            return ConnectionValidationResult.Failure(problem);
+        }
+
+        var version = MetaGraphVersion.Effective(typed.GraphVersion);
+        string? versionWarning = MetaGraphVersion.StaleWarning(typed.GraphVersion);
         using var client = GraphClient.Create(_httpClientFactory, typed);
         try
         {
             using var response = await client.GetAsync($"{typed.PageId}?fields=name,instagram_business_account", cancellationToken);
+            var body = await response.Content.ReadAsStringAsync(cancellationToken);
             if (!response.IsSuccessStatusCode)
             {
-                return ConnectionValidationResult.Failure($"Meta rejected the token or Page ({(int)response.StatusCode}).");
+                return MetaGraphVersion.IsDeprecatedAnswer(response.StatusCode, body)
+                    ? ConnectionValidationResult.Failure(MetaGraphVersion.RefusalMessage(version), [NetworkError.Mask(body)])
+                    : ConnectionValidationResult.Failure($"Meta rejected the token or Page ({(int)response.StatusCode}).");
             }
 
-            using var doc = JsonDocument.Parse(await response.Content.ReadAsStringAsync(cancellationToken));
+            // Graph moves calls to an expired version on to the next oldest it serves, and says which one answered.
+            var served = response.Headers.TryGetValues(MetaGraphVersion.ServedHeader, out var values) ? values.FirstOrDefault() : null;
+            versionWarning = MetaGraphVersion.ServedWarning(version, served) ?? versionWarning;
+
+            using var doc = JsonDocument.Parse(body);
             var name = doc.RootElement.TryGetProperty("name", out var n) ? n.GetString() : typed.PageId;
             var instagram = doc.RootElement.TryGetProperty("instagram_business_account", out var ig)
                 ? ig.GetProperty("id").GetString()
@@ -74,12 +88,12 @@ public sealed class MetaConnectionType : ConnectionTypeBase<MetaConnectionSettin
 
             if (!InsightsSwitch.IsOn(_configuration, MetaInsights.Setting))
             {
-                return ConnectionValidationResult.Success(message);
+                return ConnectionWarning.Add(ConnectionValidationResult.Success(message), versionWarning);
             }
 
             var needed = instagram is null ? PageInsightsPermissions : [.. PageInsightsPermissions, InstagramInsightsPermission];
             var missing = await MissingAsync(client, needed, cancellationToken);
-            return missing switch
+            return ConnectionWarning.Add(missing switch
             {
                 null => ConnectionValidationResult.Warning(
                     $"{message} Its insights permissions couldn't be checked, so post metrics may come back as needing permission.", null),
@@ -87,7 +101,7 @@ public sealed class MetaConnectionType : ConnectionTypeBase<MetaConnectionSettin
                 _ => ConnectionValidationResult.Warning(
                     $"{message} Post metrics need permissions this token lacks: {string.Join(", ", missing)}. Generate a new Page token with them.",
                     missing),
-            };
+            }, versionWarning);
         }
         catch (Exception ex) when (ex is not OperationCanceledException || !cancellationToken.IsCancellationRequested)
         {

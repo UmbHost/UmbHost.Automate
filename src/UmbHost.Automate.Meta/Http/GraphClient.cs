@@ -9,10 +9,13 @@ namespace UmbHost.Automate.Meta.Http;
 /// </summary>
 internal static class GraphClient
 {
+    /// <summary>
+    /// A client for the connection's Graph version, or the connector's default when it is empty (<see cref="MetaGraphVersion.Effective"/>).
+    /// </summary>
     public static HttpClient Create(IHttpClientFactory factory, MetaConnectionSettings settings)
     {
         var client = factory.CreateClient();
-        client.BaseAddress = new Uri($"https://graph.facebook.com/{settings.GraphVersion.Trim('/')}/");
+        client.BaseAddress = new Uri($"https://graph.facebook.com/{MetaGraphVersion.Effective(settings.GraphVersion)}/");
         client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", settings.PageAccessToken);
         return client;
     }

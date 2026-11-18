@@ -5,6 +5,7 @@ using Umbraco.Automate.OpenIddict.ConnectionTypes;
 using Umbraco.Automate.OpenIddict.Credentials;
 using UmbHost.Automate.LinkedIn.Configuration;
 using UmbHost.Automate.LinkedIn.Http;
+using UmbHost.Automate.Social;
 
 namespace UmbHost.Automate.LinkedIn.Connection;
 
@@ -28,15 +29,32 @@ public sealed class LinkedInProfileConnectionType : OAuthConnectionTypeBase<Link
     /// <inheritdoc />
     public override string ProviderName => LinkedInProfileOAuthComposer.ProviderName;
 
-    /// <summary>Checks the token, then asks LinkedIn who it belongs to (<c>GET /v2/userinfo</c>) and names them.</summary>
+    /// <summary>The clock the version's age is measured by.</summary>
+    internal TimeProvider Clock { get; init; } = TimeProvider.System;
+
+    /// <summary>
+    /// Checks the token, then asks LinkedIn who it belongs to (<c>GET /v2/userinfo</c>) and names them. That call is unversioned, so the
+    /// API Version is checked here only for its form and age; LinkedIn's own answer to it comes when a post is made.
+    /// </summary>
     public override async Task<ConnectionValidationResult> ValidateAsync(object? settings, CancellationToken cancellationToken)
     {
         var token = await base.ValidateAsync(settings, cancellationToken);
-        if (token.Status != ConnectionValidationStatus.Success || settings is not LinkedInProfileConnectionSettings { OAuthCredentialsId: { } id })
+        if (token.Status != ConnectionValidationStatus.Success || settings is not LinkedInProfileConnectionSettings { OAuthCredentialsId: { } id } profile)
         {
             return token;
         }
 
+        var now = Clock.GetUtcNow();
+        if (LinkedInApiVersion.Problem(profile.ApiVersion, now) is { } problem)
+        {
+            return ConnectionValidationResult.Failure(problem);
+        }
+
+        return ConnectionWarning.Add(await WhoAsync(id, cancellationToken), LinkedInApiVersion.StaleWarning(profile.ApiVersion, now));
+    }
+
+    private async Task<ConnectionValidationResult> WhoAsync(Guid id, CancellationToken cancellationToken)
+    {
         var accessToken = await CredentialsService.GetValidAccessTokenAsync(id, cancellationToken);
         MemberLookup member;
         try

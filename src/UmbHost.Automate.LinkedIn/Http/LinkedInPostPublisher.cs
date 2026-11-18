@@ -4,6 +4,7 @@ using System.Text.Json;
 using System.Text.Json.Nodes;
 using Umbraco.Automate.Core.Actions;
 using UmbHost.Automate.LinkedIn.Actions;
+using UmbHost.Automate.LinkedIn.Connection;
 using UmbHost.Automate.Social;
 
 namespace UmbHost.Automate.LinkedIn.Http;
@@ -132,7 +133,11 @@ internal sealed class LinkedInPostPublisher
             if (!response.IsSuccessStatusCode)
             {
                 var body = await response.Content.ReadAsStringAsync(cancellationToken);
-                return new LinkedInPublishResult(string.Empty, null, PostOutcome.FromResponse(context, Network, response.StatusCode, body, idempotent: false));
+                return new LinkedInPublishResult(
+                    string.Empty,
+                    null,
+                    LinkedInApiVersion.Refused(context, null, LinkedInClient.VersionOf(client), response.StatusCode, body)
+                    ?? PostOutcome.FromResponse(context, Network, response.StatusCode, body, idempotent: false));
             }
 
             // 201 with an empty body; the new post's URN is in a header.
@@ -203,7 +208,8 @@ internal sealed class LinkedInPostPublisher
         var initBody = await init.Content.ReadAsStringAsync(cancellationToken);
         if (!init.IsSuccessStatusCode)
         {
-            return (null, PostOutcome.FromPreparationResponse(context, Network, "image registration", init.StatusCode, initBody));
+            return (null, LinkedInApiVersion.Refused(context, "image registration", LinkedInClient.VersionOf(client), init.StatusCode, initBody)
+                ?? PostOutcome.FromPreparationResponse(context, Network, "image registration", init.StatusCode, initBody));
         }
 
         string uploadUrl, imageUrn;
@@ -244,7 +250,8 @@ internal sealed class LinkedInPostPublisher
 
             if (!check.IsSuccessStatusCode)
             {
-                return (null, PostOutcome.FromPreparationResponse(context, Network, "image status", check.StatusCode, body));
+                return (null, LinkedInApiVersion.Refused(context, "image status", LinkedInClient.VersionOf(client), check.StatusCode, body)
+                    ?? PostOutcome.FromPreparationResponse(context, Network, "image status", check.StatusCode, body));
             }
 
             using var doc = JsonDocument.Parse(body);

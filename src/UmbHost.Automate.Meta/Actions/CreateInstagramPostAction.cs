@@ -71,7 +71,8 @@ public sealed class CreateInstagramPostAction : ActionBase<CreateInstagramPostSe
         var containerBody = await containerResponse.Content.ReadAsStringAsync(cancellationToken);
         if (!containerResponse.IsSuccessStatusCode)
         {
-            return PostOutcome.FromPreparationResponse(context, Network, "media container", containerResponse.StatusCode, containerBody, graph: true);
+            return MetaGraphVersion.Refused(context, Network, "media container", MetaGraphVersion.VersionOf(client), containerResponse.StatusCode, containerBody)
+                   ?? PostOutcome.FromPreparationResponse(context, Network, "media container", containerResponse.StatusCode, containerBody, graph: true);
         }
 
         string containerId;
@@ -94,7 +95,8 @@ public sealed class CreateInstagramPostAction : ActionBase<CreateInstagramPostSe
             body = await response.Content.ReadAsStringAsync(cancellationToken);
             if (!response.IsSuccessStatusCode)
             {
-                return PostOutcome.FromResponse(context, Network, response.StatusCode, body, idempotent: false, graph: true);
+                return MetaGraphVersion.Refused(context, Network, null, MetaGraphVersion.VersionOf(client), response.StatusCode, body)
+                       ?? PostOutcome.FromResponse(context, Network, response.StatusCode, body, idempotent: false, graph: true);
             }
         }
         catch (Exception ex)
@@ -131,7 +133,8 @@ public sealed class CreateInstagramPostAction : ActionBase<CreateInstagramPostSe
             var body = await response.Content.ReadAsStringAsync(cancellationToken);
             if (!response.IsSuccessStatusCode)
             {
-                return PostOutcome.FromPreparationResponse(context, Network, "media container status", response.StatusCode, body, graph: true);
+                return MetaGraphVersion.Refused(context, Network, "media container status", MetaGraphVersion.VersionOf(client), response.StatusCode, body)
+                       ?? PostOutcome.FromPreparationResponse(context, Network, "media container status", response.StatusCode, body, graph: true);
             }
 
             using var doc = JsonDocument.Parse(body);
