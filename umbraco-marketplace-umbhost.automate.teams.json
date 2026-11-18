@@ -1,0 +1,33 @@
+{
+  "$schema": "https://marketplace.umbraco.com/umbraco-marketplace-schema.json",
+  "AuthorDetails": {
+    "Name": "UmbHost",
+    "Description": "UmbHost — Umbraco specialist hosting",
+    "Url": "https://umbhost.net",
+    "ImageUrl": "https://github.com/UmbHost.png"
+  },
+  "Category": "Campaign & Marketing",
+  "Description": "Microsoft Teams connection and a Post a Card action for Umbraco Automate: post a card to a Teams channel or chat through a Workflows webhook.",
+  "LicenseTypes": [
+    "Free"
+  ],
+  "IssueTrackerUrl": "https://github.com/UmbHost/UmbHost.Automate/issues",
+  "DocumentationUrl": "https://github.com/UmbHost/UmbHost.Automate/tree/main/src/UmbHost.Automate.Teams",
+  "PackageType": "Package",
+  "Title": "UmbHost.Automate.Teams",
+  "Tags": [
+    "umbraco",
+    "automate",
+    "automation",
+    "social",
+    "teams",
+    "microsoft-teams"
+  ],
+  "RelatedPackages": [
+    {
+      "PackageId": "Umbraco.Automate",
+      "Description": "Core automation system for Umbraco CMS"
+    }
+  ],
+  "LookingForContributors": true
+}

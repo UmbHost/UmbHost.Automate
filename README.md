@@ -14,6 +14,7 @@ Community provider packages for [Umbraco Automate](https://github.com/umbraco/Um
 | [`UmbHost.Automate.Threads`](src/UmbHost.Automate.Threads) | Threads OAuth connection (60-day tokens, renewed in use) + Create Threads Post (image, alt text, threads) |
 | [`UmbHost.Automate.Pinterest`](src/UmbHost.Automate.Pinterest) | Pinterest OAuth connection + Create Pin (board, title, description, link, alt text) |
 | [`UmbHost.Automate.GoogleBusiness`](src/UmbHost.Automate.GoogleBusiness) | Google Business Profile OAuth connection + Create Update (button, image) |
+| [`UmbHost.Automate.Teams`](src/UmbHost.Automate.Teams) | Microsoft Teams Workflows webhook connection + Post a Card (text, image, link) |
 
 Together they rebuild a GitHub↔Teamwork integration (create a Teamwork task from a new GitHub
 issue/PR, write the task id back into the title, mirror comments and open/closed state) as no-code
