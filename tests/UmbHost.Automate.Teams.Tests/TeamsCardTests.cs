@@ -104,4 +104,54 @@ public class TeamsCardTests
 
         TeamsCard.SizeOf(message).Should().BeLessThan(TeamsCard.MaxBytes);
     }
+
+    public static TheoryData<string> WireInputs => new()
+    {
+        "plain " + char.ConvertFromUtf32(0x1F600) + " emoji",
+        "quote \" and slash " + (char)92 + " end",
+        "ctl " + (char)0 + (char)0x1f + (char)0x7f + (char)0x2028 + " end",
+        "x" + (char)0xD83D,
+        (char)0xD83D + "x",
+        "a" + (char)0xDE00 + "b",
+    };
+
+    [Theory]
+    [MemberData(nameof(WireInputs))]
+    public void the_wire_bytes_parse_back_to_the_text(string input)
+    {
+        var bytes = TeamsCard.ToWireBytes(TeamsCard.Message(input, null, null, null, null));
+
+        var parsed = JsonNode.Parse(bytes)!.AsObject();
+        var text = parsed["attachments"]![0]!["content"]!["body"]![0]!["text"]!.GetValue<string>();
+
+        var expected = TeamsCard.Escape(input);
+        for (var i = 0; i < expected.Length; i++)
+        {
+            var lone = char.IsSurrogate(expected[i])
+                && !(char.IsHighSurrogate(expected[i]) && i + 1 < expected.Length && char.IsLowSurrogate(expected[i + 1]))
+                && !(char.IsLowSurrogate(expected[i]) && i > 0 && char.IsHighSurrogate(expected[i - 1]));
+            if (lone)
+            {
+                expected = expected.Remove(i, 1).Insert(i, ((char)0xFFFD).ToString());
+            }
+        }
+
+        text.Should().Be(expected);
+    }
+
+    [Fact]
+    public void emoji_go_out_as_raw_utf8()
+    {
+        var bytes = TeamsCard.ToWireBytes(TeamsCard.Message(char.ConvertFromUtf32(0x1F600), null, null, null, null));
+
+        bytes.AsSpan().IndexOf(new byte[] { 0xF0, 0x9F, 0x98, 0x80 }).Should().BeGreaterThan(-1);
+        System.Text.Encoding.UTF8.GetString(bytes).Should().NotContain("uD83D");
+    }
+
+    [Fact]
+    public void size_is_the_length_of_the_wire_bytes()
+    {
+        var m = TeamsCard.Message(char.ConvertFromUtf32(0x1F600) + " hi", null, null, "https://e.com", null);
+        TeamsCard.SizeOf(m).Should().Be(TeamsCard.ToWireBytes(m).Length);
+    }
 }

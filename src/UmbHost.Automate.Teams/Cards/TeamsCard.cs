@@ -96,8 +96,11 @@ internal static class TeamsCard
     }
 
     /// <summary>The message's size as UTF-8 JSON, serialised with <see cref="WireOptions"/>.</summary>
-    internal static int SizeOf(JsonObject message) =>
-        Encoding.UTF8.GetByteCount(message.ToJsonString(WireOptions));
+    internal static int SizeOf(JsonObject message) => ToWireBytes(message).Length;
+
+    /// <summary>The exact UTF-8 bytes to send; the size check measures these same bytes.</summary>
+    internal static byte[] ToWireBytes(JsonObject message) =>
+        Encoding.UTF8.GetBytes(message.ToJsonString(WireOptions));
 
     /// <summary>
     /// Makes TextBlock show the text as typed. TextBlock renders a Markdown subset, so the Markdown
@@ -169,7 +172,14 @@ internal static class TeamsCard
             for (var i = 0; i < textLength; i++)
             {
                 var c = text[i];
-                if (!char.IsSurrogate(c) && Inner.WillEncode(c))
+                if (char.IsHighSurrogate(c) && i + 1 < textLength && char.IsLowSurrogate(text[i + 1]))
+                {
+                    i++;
+                    continue;
+                }
+
+                // An unpaired surrogate is flagged so the inner encoder writes U+FFFD for it.
+                if (char.IsSurrogate(c) || Inner.WillEncode(c))
                 {
                     return i;
                 }
