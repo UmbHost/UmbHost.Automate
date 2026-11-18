@@ -7,7 +7,7 @@ Requires Umbraco Automate 17.4+ / 18.4+, `Umbraco.Automate.OpenIddict`, and Umbr
 ## Setup
 
 1. Create an app at [linkedin.com/developers](https://www.linkedin.com/developers/apps), associated with the company page.
-2. On **Products**, request **Community Management API** (gives `w_organization_social` / `r_organization_social`; LinkedIn reviews this, which can take days). Also add **Sign In with LinkedIn using OpenID Connect**, which OpenIddict's LinkedIn provider uses to identify the account.
+2. On **Products**, request **Community Management API** (gives `w_organization_social` / `r_organization_social`; LinkedIn reviews this, which can take days). It must be the **only** product on the app: LinkedIn refuses to add it to an app that has any other, so use a new app if yours already has one (Sign In with LinkedIn, Share on LinkedIn and so on). The connection doesn't need Sign In with LinkedIn: it never asks for `openid` or `profile`.
 3. On **Auth**, add the redirect URL `https://<your-site>/umbraco/automate/oauth/callback/linkedin`.
 4. Config:
 
@@ -23,8 +23,13 @@ Requires Umbraco Automate 17.4+ / 18.4+, `Umbraco.Automate.OpenIddict`, and Umbr
    }
    ```
 
-   The package adds the `w_organization_social` and `r_organization_social` scopes itself. Without a `ClientId` the provider is skipped and everything else still loads.
-5. **Automate → Connections → Create → LinkedIn → Authorize**, signed in as a member with the Administrator or Content admin role on the page.
+   The package adds the `w_organization_social`, `r_organization_social` and `rw_organization_admin` scopes itself, whatever the Insights switch says. Without a `ClientId` the provider is skipped and everything else still loads.
+5. **Automate → Connections → Create → LinkedIn → Authorize**, signed in as a member with the **Administrator** role on the page. The connection asks for `rw_organization_admin`, which LinkedIn restricts to page Administrators, so a Content admin can't connect.
+6. **Test connection** lists the company pages the account can post as, `Name (id)`, so you can copy the organization id from there. If LinkedIn refuses to list them (403), the test warns: re-authorise as a page Administrator. The id is also in the page's admin URL (`linkedin.com/company/<id>/admin`).
+
+### Sign-in
+
+The package registers LinkedIn with OpenIddict as a plain OAuth 2.0 provider, following LinkedIn's [Authorization Code Flow](https://learn.microsoft.com/en-us/linkedin/shared/authentication/authorization-code-flow): `https://www.linkedin.com/oauth/v2/authorization`, then `https://www.linkedin.com/oauth/v2/accessToken` with the client id and secret in the request body. There's no userinfo call and no PKCE (LinkedIn's standard flow has none; its PKCE flow is for native apps). The callback stays `/umbraco/automate/oauth/callback/linkedin`, so existing connections keep working.
 
 ### Token lifetime
 
@@ -60,13 +65,13 @@ Reads company page posts' lifetime share statistics with `GET /rest/organization
 
 Output: `results`, one per id: `state` (`ok`, `gone`, `unavailable`, `needsPermission`), `values` and `reason`.
 
-**Off until LinkedIn approves the app.** Share statistics need the `rw_organization_admin` permission, and the member who authorises the connection must be an **Administrator** of the page. It's part of the Community Management API, which you already need for posting, but the Standard tier review asks for a screencast of each use case you request, so include **Page Analytics** showing post performance. Once approved, turn the metrics on:
+**Off until LinkedIn approves the app.** Share statistics need the `rw_organization_admin` permission (the connection always asks for it) and an **Administrator** of the page as the member who authorised the connection. It's part of the Community Management API, which you already need for posting, but the Standard tier review asks for a screencast of each use case you request, so include **Page Analytics** showing post performance. Once approved, turn the metrics on:
 
 ```jsonc
 { "Umbraco": { "Automate": { "Providers": { "LinkedIn": { "Insights": true } } } } }
 ```
 
-Only `true` (in any case, surrounding spaces ignored) turns it on; anything else, or no value, leaves it off. While it's off the action sends nothing to LinkedIn and returns every id as `needsPermission` with reason `insights_off`. Turning it on adds `rw_organization_admin` to the scopes the connection asks for, so **re-authorise existing connections**. Until you do, LinkedIn answers 403 and posts come back `needsPermission` with reason `scope_missing`.
+Only `true` (in any case, surrounding spaces ignored) turns it on; anything else, or no value, leaves it off. While it's off the action sends nothing to LinkedIn and returns every id as `needsPermission` with reason `insights_off`. The switch only turns these reads on or off; it doesn't change the scopes, so turning it on needs no re-authorisation. A connection authorised before the package asked for `rw_organization_admin` gets a 403, and its posts come back `needsPermission` with reason `scope_missing`, until it's re-authorised.
 
 Things to know:
 

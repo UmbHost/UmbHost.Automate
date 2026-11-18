@@ -17,7 +17,8 @@ namespace UmbHost.Automate.LinkedIn.Actions;
 /// <para>
 /// Off until LinkedIn approves the app: <c>Umbraco:Automate:Providers:LinkedIn:Insights</c> (default false; on only for "true", in any
 /// case). While it's off nothing goes to LinkedIn, not even a token fetch, and every id is <c>needsPermission</c> with
-/// <c>insights_off</c>. Turning it on also adds the <c>rw_organization_admin</c> scope, so existing connections must be re-authorised.
+/// <c>insights_off</c>. The connection always asks for <c>rw_organization_admin</c> (<c>LinkedInOAuthComposer</c>), so turning it
+/// on needs no re-authorisation.
 /// </para>
 /// <para>
 /// <c>GET /rest/organizationalEntityShareStatistics?q=organizationalEntity&amp;organizationalEntity={org}</c> with
