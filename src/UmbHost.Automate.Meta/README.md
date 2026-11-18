@@ -6,7 +6,7 @@ Facebook &amp; Instagram connection and four actions for [Umbraco Automate](http
 - **Create Instagram Post**, to the Instagram professional account linked to the same Page
 - **Get Facebook Post Metrics** and **Get Instagram Post Metrics**, off until Meta approves the app (see [Post metrics](#post-metrics))
 
-Requires Umbraco Automate 17.4+ / 18.4+ and Umbraco CMS 17.6+.
+Requires Umbraco Automate 17.5+ / 18.5+ and Umbraco CMS 17.6+.
 
 ## Setup
 

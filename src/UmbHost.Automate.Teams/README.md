@@ -2,7 +2,7 @@
 
 Microsoft Teams connection and a **Post a Card to Microsoft Teams** action for [Umbraco Automate](https://github.com/umbraco/Umbraco.Automate). It posts to a Teams channel or chat through a Teams Workflows webhook.
 
-Requires Umbraco Automate 17.4+ / 18.4+ and Umbraco CMS 17.6+.
+Requires Umbraco Automate 17.5+ / 18.5+ and Umbraco CMS 17.6+.
 
 ## Setup
 
@@ -34,6 +34,6 @@ Output: `accepted`, `note`. Teams gives no post id or address, so there is no po
 
 ## Retries
 
-Teams has no idempotency key. A 429 is retried. A 5xx, a timeout or a network error fails **without** retrying and says the post may exist, because a retry could post twice. A 400 or 404 usually means the Workflow was deleted or switched off. A 401 or 403 means the address no longer works or the trigger isn't set to **Anyone**. A redirect is never followed and fails without anything being sent.
+Teams has no idempotency key. A 429 is retried, and when Teams says when to try again (`Retry-After`) the failure carries that time for UmbSocial. A 5xx, a timeout or a network error fails **without** retrying and says the post may exist, because a retry could post twice. A 400 or 404 usually means the Workflow was deleted or switched off. A 401 or 403 means the address no longer works or the trigger isn't set to **Anyone**. A redirect is never followed and fails without anything being sent.
 
-Failures name the host and the status only. Teams' own error text can contain the Workflow's id, which is part of the secret address, so it is never put in a message or log.
+Failures name the host and the status only. Teams' own error text can contain the Workflow's id, which is part of the secret address, so it is never put in a message or log; the step's log gets the same host, status and plain error code.

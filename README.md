@@ -36,8 +36,8 @@ For the social post actions a retry is a duplicate public post, so they share on
 (4xx) fails without retry, a 429 retries, and a create-post request with no clear answer (5xx,
 timeout) fails **without** retrying and says the post may exist. Mastodon is the exception: it
 honours an idempotency key, so it retries safely. Images are downloaded through Automate's
-SSRF-protected HTTP client (`src/Shared/ImageFetcher.cs`), which is why the social packages need
-Automate 17.4+ / 18.4+.
+SSRF-protected HTTP client (`src/Shared/ImageFetcher.cs`, Automate 17.4+), and a failed request's whole answer goes to the
+step's own log (`src/Shared/NetworkError.cs`, Automate 17.5+), which is why the social packages need Automate 17.5+ / 18.5+.
 
 ## Build & test
 

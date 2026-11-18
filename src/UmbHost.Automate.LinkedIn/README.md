@@ -2,7 +2,7 @@
 
 Two LinkedIn connections (OAuth) for [Umbraco Automate](https://github.com/umbraco/Umbraco.Automate): **LinkedIn** posts as a company page (**Create LinkedIn Company Post**, **Get LinkedIn Post Metrics**), and **LinkedIn profile** posts as you, on your own profile (**Create LinkedIn Profile Post**). Each needs its own LinkedIn app, and a site can use both at once.
 
-Requires Umbraco Automate 17.4+ / 18.4+, `Umbraco.Automate.OpenIddict`, and Umbraco CMS 17.6+.
+Requires Umbraco Automate 17.5+ / 18.5+, `Umbraco.Automate.OpenIddict`, and Umbraco CMS 17.6+.
 
 ## Setup: company page
 

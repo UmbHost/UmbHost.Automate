@@ -2,7 +2,7 @@
 
 X (Twitter) connection (OAuth 2.0) and **Create X Post** and **Get X Post Metrics** actions for [Umbraco Automate](https://github.com/umbraco/Umbraco.Automate).
 
-Requires Umbraco Automate 17.4+ / 18.4+, `Umbraco.Automate.OpenIddict`, and Umbraco CMS 17.6+.
+Requires Umbraco Automate 17.5+ / 18.5+, `Umbraco.Automate.OpenIddict`, and Umbraco CMS 17.6+.
 
 ## Cost
 
