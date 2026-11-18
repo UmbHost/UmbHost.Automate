@@ -11,7 +11,7 @@ using UmbHost.Automate.LinkedIn.Connection;
 namespace UmbHost.Automate.LinkedIn.Configuration;
 
 /// <summary>
-/// Registers the LinkedIn connection type and actions with Umbraco Automate.
+/// Registers the LinkedIn connection types (company page and profile) and actions with Umbraco Automate.
 /// </summary>
 public sealed class LinkedInComposer : IComposer
 {
@@ -20,10 +20,12 @@ public sealed class LinkedInComposer : IComposer
         builder.Services.AddHttpClient();
 
         builder.WithCollectionBuilder<ConnectionTypeCollectionBuilder>()
-            .Add<LinkedInConnectionType>();
+            .Add<LinkedInConnectionType>()
+            .Add<LinkedInProfileConnectionType>();
 
         builder.WithCollectionBuilder<ActionCollectionBuilder>()
             .Add<CreateOrganizationPostAction>()
+            .Add<CreateMemberPostAction>()
             .Add<GetPostMetricsAction>();
     }
 }
@@ -113,5 +115,44 @@ public sealed class LinkedInOAuthComposer : IComposer
 
         builder.Services.AddOpenIddict()
             .AddClient(options => options.AddRegistration(registration));
+    }
+}
+
+/// <summary>
+/// Registers OpenIddict's built-in LinkedIn provider (Sign In with LinkedIn using OpenID Connect) under the name <c>LinkedInProfile</c>,
+/// with <c>w_member_social</c> (Share on LinkedIn) added, for the profile connection. It has its own credentials
+/// (<c>Umbraco:Automate:Providers:LinkedInProfile</c>) and callback (<c>umbraco/automate/oauth/callback/linkedinprofile</c>), so it sits
+/// beside the company page's <c>LinkedIn</c> registration (<see cref="LinkedInOAuthComposer"/>), which is a different LinkedIn app: LinkedIn
+/// keeps the Community Management API alone on its app, so profile posting needs a second one.
+/// </summary>
+/// <remarks>
+/// The built-in provider is right here, unlike for the company page: it asks for <c>profile</c> and <c>openid</c> and calls userinfo,
+/// which this app grants. Both registrations share LinkedIn's issuer, so this one sets its own registration id. Only registered when a
+/// client id is configured: OpenIddict rejects a registration without one at startup, which would stop the whole site booting.
+/// Scopes: https://learn.microsoft.com/en-us/linkedin/consumer/integrations/self-serve/share-on-linkedin and
+/// https://learn.microsoft.com/en-us/linkedin/consumer/integrations/self-serve/sign-in-with-linkedin-v2
+/// </remarks>
+public sealed class LinkedInProfileOAuthComposer : IComposer
+{
+    /// <summary>The OpenIddict provider name, also the configuration key under <c>Umbraco:Automate:Providers</c>.</summary>
+    public const string ProviderName = "LinkedInProfile";
+
+    /// <summary>The scope that posts as the member, on top of the provider's own <c>openid</c> and <c>profile</c>.</summary>
+    internal const string PostScope = "w_member_social";
+
+    public void Compose(IUmbracoBuilder builder)
+    {
+        if (string.IsNullOrWhiteSpace(builder.Config[$"Umbraco:Automate:Providers:{ProviderName}:ClientId"]))
+        {
+            return;
+        }
+
+        builder.Services.AddOpenIddict()
+            .AddClient(options => options.UseWebProviders()
+                .AddLinkedIn(linkedIn => linkedIn
+                    .AddScopes(PostScope)
+                    .SetProviderName(ProviderName)
+                    .SetRegistrationId(ProviderName)
+                    .SetProviderDisplayName("LinkedIn profile")));
     }
 }
