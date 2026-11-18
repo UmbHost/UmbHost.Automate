@@ -24,7 +24,10 @@ public class ProfileConnectionTestTests
         var credentials = new Mock<IOAuthCredentialsService>();
         credentials.Setup(c => c.GetValidAccessTokenAsync(CredentialsId, It.IsAny<CancellationToken>())).ReturnsAsync(token);
         return new LinkedInProfileConnectionType(
-            new ConnectionTypeInfrastructure(Mock.Of<IEditableModelResolver>()), credentials.Object, handler.CreateClientFactory());
+            new ConnectionTypeInfrastructure(Mock.Of<IEditableModelResolver>()), credentials.Object, handler.CreateClientFactory())
+        {
+            Clock = FixedClock.Today,
+        };
     }
 
     [Fact]

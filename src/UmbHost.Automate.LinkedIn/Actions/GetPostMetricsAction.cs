@@ -159,6 +159,13 @@ public sealed partial class GetPostMetricsAction : ActionBase<GetPostMetricsSett
         {
             using var response = await client.GetAsync(path, cancellationToken);
             body = await response.Content.ReadAsStringAsync(cancellationToken);
+
+            // A retired version is the whole step's (the admin must move it on), not each post's.
+            if (LinkedInApiVersion.Refused(context, "metrics", LinkedInClient.VersionOf(client), response.StatusCode, body) is { } refused)
+            {
+                return refused;
+            }
+
             if (response.StatusCode == HttpStatusCode.Forbidden)
             {
                 foreach (var urn in chunk)

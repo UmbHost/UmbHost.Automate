@@ -1,6 +1,7 @@
 using System.Net;
 using System.Net.Http.Headers;
 using System.Text.Json;
+using UmbHost.Automate.LinkedIn.Connection;
 
 namespace UmbHost.Automate.LinkedIn.Http;
 
@@ -12,15 +13,26 @@ internal static class LinkedInClient
     /// <summary>The OpenID Connect userinfo endpoint (Sign In with LinkedIn using OpenID Connect).</summary>
     public const string UserInfoUrl = "https://api.linkedin.com/v2/userinfo";
 
-    public static HttpClient Create(IHttpClientFactory factory, string accessToken, string apiVersion)
+    /// <summary>The version header's name.</summary>
+    public const string VersionHeader = "LinkedIn-Version";
+
+    /// <summary>
+    /// A client for <c>https://api.linkedin.com/rest/</c> that sends <paramref name="apiVersion"/>, or the connector's default when it
+    /// is empty (<see cref="LinkedInApiVersion.Effective"/>).
+    /// </summary>
+    public static HttpClient Create(IHttpClientFactory factory, string accessToken, string? apiVersion)
     {
         var client = factory.CreateClient();
         client.BaseAddress = new Uri("https://api.linkedin.com/rest/");
         client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", accessToken);
-        client.DefaultRequestHeaders.Add("LinkedIn-Version", apiVersion);
+        client.DefaultRequestHeaders.Add(VersionHeader, LinkedInApiVersion.Effective(apiVersion));
         client.DefaultRequestHeaders.Add("X-Restli-Protocol-Version", "2.0.0");
         return client;
     }
+
+    /// <summary>The version a client made by <see cref="Create"/> sends.</summary>
+    public static string VersionOf(HttpClient client)
+        => client.DefaultRequestHeaders.TryGetValues(VersionHeader, out var values) ? values.First() : LinkedInApiVersion.Default;
 
     /// <summary>
     /// Who the token belongs to: <c>GET /v2/userinfo</c> returns the member's <c>sub</c> and <c>name</c> with the <c>openid</c> and

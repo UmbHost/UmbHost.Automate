@@ -5,6 +5,7 @@ using Umbraco.Automate.OpenIddict.ConnectionTypes;
 using Umbraco.Automate.OpenIddict.Credentials;
 using UmbHost.Automate.LinkedIn.Configuration;
 using UmbHost.Automate.LinkedIn.Http;
+using UmbHost.Automate.Social;
 
 namespace UmbHost.Automate.LinkedIn.Connection;
 
@@ -47,6 +48,9 @@ public sealed class LinkedInConnectionType : OAuthConnectionTypeBase<LinkedInCon
     /// <inheritdoc />
     public override string ProviderName => LinkedInOAuthComposer.ProviderName;
 
+    /// <summary>The clock the version's age is measured by.</summary>
+    internal TimeProvider Clock { get; init; } = TimeProvider.System;
+
     /// <summary>
     /// Checks the token, then lists the company pages the account can post as. The member's page roles come from
     /// <c>GET /rest/organizationAcls?q=roleAssignee</c> and each page's name from <c>GET /rest/organizations/{id}</c>
@@ -62,8 +66,20 @@ public sealed class LinkedInConnectionType : OAuthConnectionTypeBase<LinkedInCon
             return token;
         }
 
+        var now = Clock.GetUtcNow();
+        if (LinkedInApiVersion.Problem(linkedIn.ApiVersion, now) is { } problem)
+        {
+            return ConnectionValidationResult.Failure(problem);
+        }
+
+        var result = await ListPagesAsync(id, linkedIn.ApiVersion, cancellationToken);
+        return ConnectionWarning.Add(result, LinkedInApiVersion.StaleWarning(linkedIn.ApiVersion, now));
+    }
+
+    private async Task<ConnectionValidationResult> ListPagesAsync(Guid id, string? apiVersion, CancellationToken cancellationToken)
+    {
         var accessToken = await CredentialsService.GetValidAccessTokenAsync(id, cancellationToken);
-        using var client = LinkedInClient.Create(_httpClientFactory, accessToken!, linkedIn.ApiVersion);
+        using var client = LinkedInClient.Create(_httpClientFactory, accessToken!, apiVersion);
 
         try
         {
@@ -73,6 +89,11 @@ public sealed class LinkedInConnectionType : OAuthConnectionTypeBase<LinkedInCon
                 using var response = await client.GetAsync(
                     $"organizationAcls?q=roleAssignee&state=APPROVED&start={page * PageSize}&count={PageSize}", cancellationToken);
                 var body = await response.Content.ReadAsStringAsync(cancellationToken);
+
+                if (LinkedInApiVersion.IsVersionRefusal(response.StatusCode, body))
+                {
+                    return ConnectionValidationResult.Failure(LinkedInApiVersion.RefusalMessage(LinkedInClient.VersionOf(client)), [body]);
+                }
 
                 if (response.StatusCode == HttpStatusCode.Unauthorized)
                 {
