@@ -77,7 +77,7 @@ public sealed class CreateOrganizationPostAction : ActionBase<CreateOrganization
 
         using var client = LinkedInClient.Create(_httpClientFactory, token, conn.ApiVersion);
         var published = await _publisher.PublishAsync(
-            client, token, $"urn:li:organization:{settings.OrganizationId}", content, ImagePollDelay, imageStatusMayBeForbidden: false, cancellationToken);
+            context, client, token, $"urn:li:organization:{settings.OrganizationId}", content, ImagePollDelay, imageStatusMayBeForbidden: false, cancellationToken);
         if (published.Failure is not null)
         {
             return published.Failure;

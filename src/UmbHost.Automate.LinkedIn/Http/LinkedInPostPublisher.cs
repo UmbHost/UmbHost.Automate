@@ -72,6 +72,7 @@ internal sealed class LinkedInPostPublisher
     /// when the status check is refused the image is used after one more wait instead of failing the post.
     /// </summary>
     public async Task<LinkedInPublishResult> PublishAsync(
+        ActionContext? context,
         HttpClient client,
         string token,
         string author,
@@ -109,7 +110,7 @@ internal sealed class LinkedInPostPublisher
         if (!string.IsNullOrWhiteSpace(content.ImageUrl))
         {
             var (imageUrn, failure) = await UploadImageAsync(
-                client, token, author, content.ImageUrl, imagePollDelay, imageStatusMayBeForbidden, cancellationToken);
+                context, client, token, author, content.ImageUrl, imagePollDelay, imageStatusMayBeForbidden, cancellationToken);
             if (failure is not null)
             {
                 return new LinkedInPublishResult(string.Empty, null, failure);
@@ -131,7 +132,7 @@ internal sealed class LinkedInPostPublisher
             if (!response.IsSuccessStatusCode)
             {
                 var body = await response.Content.ReadAsStringAsync(cancellationToken);
-                return new LinkedInPublishResult(string.Empty, null, PostOutcome.FromResponse(Network, response.StatusCode, body, idempotent: false));
+                return new LinkedInPublishResult(string.Empty, null, PostOutcome.FromResponse(context, Network, response.StatusCode, body, idempotent: false));
             }
 
             // 201 with an empty body; the new post's URN is in a header.
@@ -148,7 +149,7 @@ internal sealed class LinkedInPostPublisher
         {
             warning = postUrn.Length == 0
                 ? "The post was published but LinkedIn did not return its id, so the first comment was not added."
-                : await AddFirstCommentAsync(client, postUrn, author, content.FirstComment, cancellationToken);
+                : await AddFirstCommentAsync(context, client, postUrn, author, content.FirstComment, cancellationToken);
         }
 
         return new LinkedInPublishResult(postUrn, warning, null);
@@ -159,7 +160,7 @@ internal sealed class LinkedInPostPublisher
 
     /// <summary>Comments on the new post as its author. Returns a warning when that fails, or null on success.</summary>
     private static async Task<string?> AddFirstCommentAsync(
-        HttpClient client, string postUrn, string actor, string text, CancellationToken cancellationToken)
+        ActionContext? context, HttpClient client, string postUrn, string actor, string text, CancellationToken cancellationToken)
     {
         try
         {
@@ -174,7 +175,8 @@ internal sealed class LinkedInPostPublisher
 
             var body = await response.Content.ReadAsStringAsync(cancellationToken);
             var outcome = ThreadParts.IsAmbiguous(response.StatusCode) ? "may not have been added" : "could not be added";
-            return $"The post was published but the first comment {outcome}: LinkedIn returned {(int)response.StatusCode}: {(body.Length <= 300 ? body : body[..300] + "…")}";
+            NetworkError.Log(context, Network, "first comment", response.StatusCode, body);
+            return $"The post was published but the first comment {outcome}: {NetworkError.Plain(Network, "first comment", response.StatusCode, body)}";
         }
         catch (Exception ex) when (ex is not OperationCanceledException || !cancellationToken.IsCancellationRequested)
         {
@@ -186,7 +188,7 @@ internal sealed class LinkedInPostPublisher
     /// Registers an image with LinkedIn, uploads it, and waits until LinkedIn has processed it.
     /// </summary>
     private async Task<(string? ImageUrn, ActionResult? Failure)> UploadImageAsync(
-        HttpClient client, string token, string owner, string imageUrl, TimeSpan pollDelay, bool statusMayBeForbidden, CancellationToken cancellationToken)
+        ActionContext? context, HttpClient client, string token, string owner, string imageUrl, TimeSpan pollDelay, bool statusMayBeForbidden, CancellationToken cancellationToken)
     {
         var (image, imageError) = await _imageFetcher.FetchAsync(imageUrl, MaxImageBytes, cancellationToken);
         if (image is null)
@@ -201,7 +203,7 @@ internal sealed class LinkedInPostPublisher
         var initBody = await init.Content.ReadAsStringAsync(cancellationToken);
         if (!init.IsSuccessStatusCode)
         {
-            return (null, PostOutcome.FromPreparationResponse(Network, "image registration", init.StatusCode, initBody));
+            return (null, PostOutcome.FromPreparationResponse(context, Network, "image registration", init.StatusCode, initBody));
         }
 
         string uploadUrl, imageUrn;
@@ -218,7 +220,7 @@ internal sealed class LinkedInPostPublisher
             using var uploaded = await client.SendAsync(upload, cancellationToken);
             if (!uploaded.IsSuccessStatusCode)
             {
-                return (null, PostOutcome.FromPreparationResponse(
+                return (null, PostOutcome.FromPreparationResponse(context,
                     Network, "image upload", uploaded.StatusCode, await uploaded.Content.ReadAsStringAsync(cancellationToken)));
             }
         }
@@ -242,7 +244,7 @@ internal sealed class LinkedInPostPublisher
 
             if (!check.IsSuccessStatusCode)
             {
-                return (null, PostOutcome.FromPreparationResponse(Network, "image status", check.StatusCode, body));
+                return (null, PostOutcome.FromPreparationResponse(context, Network, "image status", check.StatusCode, body));
             }
 
             using var doc = JsonDocument.Parse(body);

@@ -389,4 +389,55 @@ public class CreateThreadsPostActionTests
         threads.Tokens.Should().Equal("THLong");
         threads.Handler.VerifyRequest(r => r.Headers.Authorization != null, Times.Never());
     }
+
+    // The answer Threads gave a live post on 2026-11-18 (fbtrace_id changed): a Graph error whose error_user_msg is
+    // "the message to display to the user" (https://developers.facebook.com/docs/graph-api/guides/error-handling).
+    private const string TooManyLinks =
+        """{"error":{"message":"Invalid parameter","code":100,"type":"OAuthException","error_subcode":4279111,"is_transient":false,"error_user_msg":"You can't add more than 5 unique links to a Threads post.","error_user_title":"Total number of unique links in Threads post exceeded","fbtrace_id":"AbCdEfGh123"}}""";
+
+    [Fact]
+    public async Task A_refused_post_reads_as_the_networks_own_words_and_the_whole_answer_goes_to_the_step_log()
+    {
+        var threads = new FakeThreads { Container = _ => Json(TooManyLinks, HttpStatusCode.BadRequest) };
+        var context = ActionTestHarness.Context(new CreateThreadsPostSettings { Text = "One" }, Conn);
+
+        var result = await Sut(threads.Handler).ExecuteAsync(context, default);
+
+        result.ErrorCategory.Should().Be(StepRunErrorCategory.Validation);
+        result.Exception!.Message.Should().Be("You can't add more than 5 unique links to a Threads post.");
+        var logged = context.LogEntries.Should().ContainSingle().Subject;
+        logged.Level.Should().Be(ActionLogLevel.Error);
+        logged.Message.Should().StartWith("Threads post preparation returned 400: {").And.Contain("\"fbtrace_id\":\"AbCdEfGh123\"");
+        logged.Message.Should().NotContain("THLong").And.NotContain("access_token");
+    }
+
+    [Fact]
+    public async Task An_expired_token_answered_with_400_is_the_sign_in_not_a_refusal()
+    {
+        var threads = new FakeThreads
+        {
+            Container = _ => Json("""{"error":{"message":"Error validating access token: Session has expired.","type":"OAuthException","code":190,"fbtrace_id":"X1"}}""", HttpStatusCode.BadRequest),
+        };
+
+        var result = await Sut(threads.Handler).ExecuteAsync(ActionTestHarness.Context(new CreateThreadsPostSettings { Text = "One" }, Conn), default);
+
+        result.ErrorCategory.Should().Be(StepRunErrorCategory.Authentication);
+        result.Exception!.Message.Should().Be("Error validating access token: Session has expired.");
+    }
+
+    [Fact]
+    public async Task A_token_the_network_echoes_back_is_masked_in_the_error_and_the_step_log()
+    {
+        var token = "THAA" + new string('x', 180);
+        var threads = new FakeThreads
+        {
+            Container = _ => Json($$$"""{"error":{"message":"Malformed access token {{{token}}}","type":"OAuthException","code":190}}""", HttpStatusCode.BadRequest),
+        };
+        var context = ActionTestHarness.Context(new CreateThreadsPostSettings { Text = "One" }, Conn);
+
+        var result = await Sut(threads.Handler, Credentials(TimeSpan.FromHours(2), token)).ExecuteAsync(context, default);
+
+        result.Exception!.Message.Should().Be("Malformed access token [redacted]");
+        context.LogEntries.Should().OnlyContain(e => !e.Message.Contains(token));
+    }
 }

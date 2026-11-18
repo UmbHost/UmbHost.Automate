@@ -86,7 +86,7 @@ public sealed partial class GetInstagramPostMetricsAction : ActionBase<GetInstag
         using var client = GraphClient.Create(_httpClientFactory, conn);
         foreach (var id in ids.Where(id => MediaId().IsMatch(id)))
         {
-            var insights = await GraphRead.GetAsync(client, Network, $"{id}/insights?metric={Metrics}&period=lifetime", cancellationToken);
+            var insights = await GraphRead.GetAsync(context, client, Network, $"{id}/insights?metric={Metrics}&period=lifetime", cancellationToken);
             if (insights.Failure is not null)
             {
                 return insights.Failure;
@@ -95,7 +95,7 @@ public sealed partial class GetInstagramPostMetricsAction : ActionBase<GetInstag
             if (insights.IsRejected)
             {
                 // Albums have no insights, but what the call answers for one isn't documented: look the media up.
-                var lookup = await GraphRead.GetAsync(client, Network, $"{id}?fields=media_type", cancellationToken);
+                var lookup = await GraphRead.GetAsync(context, client, Network, $"{id}?fields=media_type", cancellationToken);
                 if (lookup.Failure is not null)
                 {
                     return lookup.Failure;

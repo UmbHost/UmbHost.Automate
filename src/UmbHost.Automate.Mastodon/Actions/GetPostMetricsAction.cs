@@ -115,7 +115,7 @@ public sealed partial class GetPostMetricsAction : ActionBase<GetPostMetricsSett
 
                     if (response.StatusCode != HttpStatusCode.NotFound)
                     {
-                        return ReadOutcome.FromResponse(Network, response.StatusCode, body);
+                        return ReadOutcome.FromResponse(context, Network, response.StatusCode, body);
                     }
 
                     // Before 4.3.0 there is no batch route: read this chunk and the rest one status at a time.
@@ -137,7 +137,7 @@ public sealed partial class GetPostMetricsAction : ActionBase<GetPostMetricsSett
                     }
                     else if (response.StatusCode != HttpStatusCode.NotFound)
                     {
-                        return ReadOutcome.FromResponse(Network, response.StatusCode, body);
+                        return ReadOutcome.FromResponse(context, Network, response.StatusCode, body);
                     }
                 }
             }

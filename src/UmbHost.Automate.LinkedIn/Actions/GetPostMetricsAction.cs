@@ -137,7 +137,7 @@ public sealed partial class GetPostMetricsAction : ActionBase<GetPostMetricsSett
                          .Concat(ugcPosts.Chunk(MaxUrnsPerCall).Select(c => (c, string.Join("&", c.Select((urn, i) => $"ugcPosts[{i}]={Uri.EscapeDataString(urn)}"))))))
             {
                 var failure = await ReadAsync(
-                    client, $"organizationalEntityShareStatistics?q=organizationalEntity&organizationalEntity={organization}&{posts}",
+                    context, client, $"organizationalEntityShareStatistics?q=organizationalEntity&organizationalEntity={organization}&{posts}",
                     chunk, settled, cancellationToken);
                 if (failure is not null)
                 {
@@ -152,7 +152,7 @@ public sealed partial class GetPostMetricsAction : ActionBase<GetPostMetricsSett
 
     /// <summary>Reads one call's posts into <paramref name="settled"/>; returns a step failure, or null.</summary>
     private static async Task<ActionResult?> ReadAsync(
-        HttpClient client, string path, IReadOnlyCollection<string> chunk, Dictionary<string, PostMetricsResult> settled, CancellationToken cancellationToken)
+        ActionContext context, HttpClient client, string path, IReadOnlyCollection<string> chunk, Dictionary<string, PostMetricsResult> settled, CancellationToken cancellationToken)
     {
         string body;
         try
@@ -182,7 +182,7 @@ public sealed partial class GetPostMetricsAction : ActionBase<GetPostMetricsSett
 
             if (!response.IsSuccessStatusCode)
             {
-                return ReadOutcome.FromResponse(Network, response.StatusCode, body);
+                return ReadOutcome.FromResponse(context, Network, response.StatusCode, body);
             }
         }
         catch (Exception ex) when (ReadOutcome.IsTransport(ex))

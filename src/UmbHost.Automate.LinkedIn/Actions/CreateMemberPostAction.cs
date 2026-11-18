@@ -100,7 +100,7 @@ public sealed class CreateMemberPostAction : ActionBase<CreateMemberPostSettings
 
         if ((int)member.Status is < 200 or > 299)
         {
-            return PostOutcome.FromPreparationResponse("LinkedIn", "member lookup", member.Status, member.Body);
+            return PostOutcome.FromPreparationResponse(context, "LinkedIn", "member lookup", member.Status, member.Body);
         }
 
         if (member.PersonUrn is not { } author)
@@ -111,7 +111,7 @@ public sealed class CreateMemberPostAction : ActionBase<CreateMemberPostSettings
         }
 
         using var client = LinkedInClient.Create(_httpClientFactory, token, conn.ApiVersion);
-        var published = await _publisher.PublishAsync(client, token, author, content, ImagePollDelay, imageStatusMayBeForbidden: true, cancellationToken);
+        var published = await _publisher.PublishAsync(context, client, token, author, content, ImagePollDelay, imageStatusMayBeForbidden: true, cancellationToken);
         if (published.Failure is not null)
         {
             return published.Failure;

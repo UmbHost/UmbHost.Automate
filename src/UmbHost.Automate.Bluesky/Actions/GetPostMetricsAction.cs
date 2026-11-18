@@ -75,7 +75,7 @@ public sealed partial class GetPostMetricsAction : ActionBase<GetPostMetricsSett
                 {
                     if (!dids.TryGetValue(authority, out var did))
                     {
-                        var (resolved, failure) = await ResolveHandleAsync(client, authority, cancellationToken);
+                        var (resolved, failure) = await ResolveHandleAsync(context, client, authority, cancellationToken);
                         if (failure is not null)
                         {
                             return failure;
@@ -98,7 +98,7 @@ public sealed partial class GetPostMetricsAction : ActionBase<GetPostMetricsSett
                 var body = await response.Content.ReadAsStringAsync(cancellationToken);
                 if (!response.IsSuccessStatusCode)
                 {
-                    return ReadOutcome.FromResponse(Network, response.StatusCode, body);
+                    return ReadOutcome.FromResponse(context, Network, response.StatusCode, body);
                 }
 
                 using var doc = JsonDocument.Parse(body);
@@ -128,7 +128,7 @@ public sealed partial class GetPostMetricsAction : ActionBase<GetPostMetricsSett
     }
 
     /// <summary>Resolves a handle to its DID; a handle that doesn't resolve (400, e.g. HandleNotFound) is null.</summary>
-    private static async Task<(string? Did, ActionResult? Failure)> ResolveHandleAsync(HttpClient client, string handle, CancellationToken cancellationToken)
+    private static async Task<(string? Did, ActionResult? Failure)> ResolveHandleAsync(ActionContext context, HttpClient client, string handle, CancellationToken cancellationToken)
     {
         using var response = await client.GetAsync($"com.atproto.identity.resolveHandle?handle={Uri.EscapeDataString(handle)}", cancellationToken);
         var body = await response.Content.ReadAsStringAsync(cancellationToken);
@@ -139,7 +139,7 @@ public sealed partial class GetPostMetricsAction : ActionBase<GetPostMetricsSett
 
         if (!response.IsSuccessStatusCode)
         {
-            return (null, ReadOutcome.FromResponse(Network, response.StatusCode, body));
+            return (null, ReadOutcome.FromResponse(context, Network, response.StatusCode, body));
         }
 
         using var doc = JsonDocument.Parse(body);
