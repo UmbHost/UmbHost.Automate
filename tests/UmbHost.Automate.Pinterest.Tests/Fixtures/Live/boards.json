@@ -1,0 +1,24 @@
+{
+  "items": [
+    {
+      "pin_count": 3,
+      "board_pins_modified_at": "2026-11-18T12:24:16.620000",
+      "created_at": "2026-11-18T11:59:36",
+      "id": "200000000000000001",
+      "name": "UmbSocial test (sandbox)",
+      "collaborator_count": 0,
+      "is_ads_only": false,
+      "privacy": "PUBLIC",
+      "description": "Test board for UmbSocial live testing.",
+      "follower_count": 0,
+      "media": {
+        "pin_thumbnail_urls": [],
+        "image_cover_url": null
+      },
+      "owner": {
+        "username": "example"
+      }
+    }
+  ],
+  "bookmark": null
+}
