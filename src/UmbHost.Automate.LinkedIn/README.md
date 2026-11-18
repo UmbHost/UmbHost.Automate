@@ -7,7 +7,7 @@ Requires Umbraco Automate 17.4+ / 18.4+, `Umbraco.Automate.OpenIddict`, and Umbr
 ## Setup
 
 1. Create an app at [linkedin.com/developers](https://www.linkedin.com/developers/apps), associated with the company page.
-2. On **Products**, request **Community Management API** (gives `w_organization_social` / `r_organization_social`; LinkedIn reviews this, which can take days). Also add **Sign In with LinkedIn using OpenID Connect**, which OpenIddict's LinkedIn provider uses to identify the account.
+2. On **Products**, request **Community Management API** (gives `w_organization_social` / `r_organization_social`; LinkedIn reviews this, which can take days). It must be the **only** product on the app: LinkedIn refuses to add it to an app that has any other, so use a new app if yours already has one (Sign In with LinkedIn, Share on LinkedIn and so on). The connection doesn't need Sign In with LinkedIn: it never asks for `openid` or `profile`.
 3. On **Auth**, add the redirect URL `https://<your-site>/umbraco/automate/oauth/callback/linkedin`.
 4. Config:
 
@@ -25,6 +25,11 @@ Requires Umbraco Automate 17.4+ / 18.4+, `Umbraco.Automate.OpenIddict`, and Umbr
 
    The package adds the `w_organization_social` and `r_organization_social` scopes itself. Without a `ClientId` the provider is skipped and everything else still loads.
 5. **Automate → Connections → Create → LinkedIn → Authorize**, signed in as a member with the Administrator or Content admin role on the page.
+6. **Test connection** lists the company pages the account can post as, `Name (id)`, so you can copy the organization id from there. LinkedIn only lists them with the `rw_organization_admin` permission, which the connection asks for while [insights](#get-linkedin-post-metrics) are on. Without it the test warns that it can't list the pages: posting still works, and the id is in the page's admin URL (`linkedin.com/company/<id>/admin`).
+
+### Sign-in
+
+The package registers LinkedIn with OpenIddict as a plain OAuth 2.0 provider, following LinkedIn's [Authorization Code Flow](https://learn.microsoft.com/en-us/linkedin/shared/authentication/authorization-code-flow): `https://www.linkedin.com/oauth/v2/authorization`, then `https://www.linkedin.com/oauth/v2/accessToken` with the client id and secret in the request body. There's no userinfo call and no PKCE (LinkedIn's standard flow has none; its PKCE flow is for native apps). The callback stays `/umbraco/automate/oauth/callback/linkedin`, so existing connections keep working.
 
 ### Token lifetime
 
