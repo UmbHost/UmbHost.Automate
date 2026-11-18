@@ -154,6 +154,7 @@ public class TeamsConnectionTypeTests
 
         _ = sut.GetSettingsSchema();
         _ = new TeamsConnectionSettings();
+        _ = sut.ResolveSettings(new Dictionary<string, object?> { ["webhookUrl"] = Address });
 
         handler.Requests.Should().BeEmpty();
     }
@@ -169,5 +170,27 @@ public class TeamsConnectionTypeTests
         var ex = await act.Should().ThrowAsync<InvalidOperationException>();
         ex.Which.Message.Should().Contain("evil.example").And.NotContain("SECRETSIG").And.NotContain("/workflows/");
         handler.Requests.Should().BeEmpty();
+    }
+
+    [Fact]
+    public void the_named_client_never_follows_redirects_times_out_at_30s_and_logs_nothing()
+    {
+        var services = new ServiceCollection();
+        TeamsWebhookClient.Register(services);
+        using var provider = services.BuildServiceProvider();
+
+        var handler = provider.GetRequiredService<IHttpMessageHandlerFactory>().CreateHandler(TeamsWebhookClient.ClientName);
+
+        var chain = new List<HttpMessageHandler>();
+        for (HttpMessageHandler? h = handler; h is not null; h = (h as DelegatingHandler)?.InnerHandler)
+        {
+            chain.Add(h);
+        }
+
+        // The default logging handlers would write the workflow path (a secret) to the log.
+        chain.Select(h => h.GetType().Name).Should().NotContain(n => n.Contains("Logging"));
+        chain[^1].Should().BeOfType<SocketsHttpHandler>().Which.AllowAutoRedirect.Should().BeFalse();
+        provider.GetRequiredService<IHttpClientFactory>().CreateClient(TeamsWebhookClient.ClientName)
+            .Timeout.Should().Be(TimeSpan.FromSeconds(30));
     }
 }

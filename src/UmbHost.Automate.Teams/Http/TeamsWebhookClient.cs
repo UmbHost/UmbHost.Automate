@@ -23,6 +23,8 @@ internal sealed class TeamsWebhookClient
     /// </summary>
     public static void Register(IServiceCollection services)
         => services.AddHttpClient(ClientName, client => client.Timeout = TimeSpan.FromSeconds(30))
+                   // The default logging handlers log the request address, and the workflow path is a secret.
+                   .RemoveAllLoggers()
                    .ConfigurePrimaryHttpMessageHandler(() => new SocketsHttpHandler { AllowAutoRedirect = false });
 
     public async Task<HttpResponseMessage> PostAsync(Uri address, JsonObject message, CancellationToken cancellationToken)
