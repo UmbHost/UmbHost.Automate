@@ -6,7 +6,7 @@ Requires Umbraco Automate 17.5+ / 18.5+, `Umbraco.Automate.OpenIddict` 17.1.5+, 
 
 ## Testing status
 
-This package is tested against mocked Threads API responses only, built from Meta's published Threads API documentation. It has not been run against the live Threads API.
+**Checked live** on 2026-11-18: six posts published (12 to 28 seconds each, from container to publish, most of it waiting for the container to finish), and a post with more than five links refused in Threads' own words ("You can't add more than 5 unique links to a Threads post."). The tests use that refusal word for word (`tests/UmbHost.Automate.Threads.Tests/Fixtures/Live`); the other responses are mocked from Meta's published Threads API documentation.
 
 ## Setup
 

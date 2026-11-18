@@ -40,21 +40,49 @@ public class GetPostMetricsActionTests
             .Select(p => System.Uri.UnescapeDataString(p[1]))
             .ToList();
 
-    /// <summary>A PostView shaped as app.bsky.feed.defs#postView.</summary>
-    private static JsonObject PostView(string uri, int likes = 1, int reposts = 2, int replies = 3, int quotes = 4, int bookmarks = 5) => new()
+    /// <summary>The live PostViews the AppView served for the account's posts on 2026-11-18 (Fixtures/Live/author-feed.json).</summary>
+    private static List<JsonObject> LivePostViews()
+        => LiveFixture.Object("author-feed")["feed"]!.AsArray().Select(i => i!["post"]!.AsObject()).ToList();
+
+    /// <summary>A real PostView (the live image post) under another uri, with counts 1 to 5 so each name is told apart.</summary>
+    private static JsonObject PostView(string uri, int likes = 1, int reposts = 2, int replies = 3, int quotes = 4, int bookmarks = 5)
     {
-        ["uri"] = uri,
-        ["cid"] = "bafyreib2rxk3rh6kzwq",
-        ["author"] = new JsonObject { ["did"] = "did:plc:abc", ["handle"] = "umbhost.net" },
-        ["record"] = new JsonObject { ["$type"] = "app.bsky.feed.post", ["text"] = "Hello", ["createdAt"] = "2026-11-11T09:00:00.000Z" },
-        ["bookmarkCount"] = bookmarks,
-        ["replyCount"] = replies,
-        ["repostCount"] = reposts,
-        ["likeCount"] = likes,
-        ["quoteCount"] = quotes,
-        ["indexedAt"] = "2026-11-11T09:00:00.000Z",
-        ["labels"] = new JsonArray(),
-    };
+        var view = LivePostViews().Single(p => p["embed"]?["$type"]?.GetValue<string>() == "app.bsky.embed.images#view");
+        view.Parent!.AsObject().Remove("post");
+        view["uri"] = uri;
+        view["bookmarkCount"] = bookmarks;
+        view["replyCount"] = replies;
+        view["repostCount"] = reposts;
+        view["likeCount"] = likes;
+        view["quoteCount"] = quotes;
+        return view;
+    }
+
+    [Fact]
+    public async Task live_post_views_read_back_their_real_counts()
+    {
+        var handler = new Mock<HttpMessageHandler>();
+        var live = LivePostViews();
+        foreach (var view in live)
+        {
+            view.Parent!.AsObject().Remove("post");
+        }
+
+        // getPosts answers {"posts":[PostView]}, the same PostView getAuthorFeed carries in each item's "post".
+        handler.SetupRequest(HttpMethod.Get, r => r.RequestUri!.GetLeftPart(UriPartial.Path) == GetPosts)
+               .ReturnsResponse(HttpStatusCode.OK, new StringContent(new JsonObject { ["posts"] = new JsonArray(live.Select(v => (JsonNode)v).ToArray()) }.ToJsonString()));
+        var uris = live.Select(v => v["uri"]!.GetValue<string>()).ToArray();
+
+        var results = Results(await Sut(handler).ExecuteAsync(Context(uris), default));
+
+        results.Should().HaveCount(7).And.OnlyContain(r => r.State == "ok");
+        // Every live PostView carried all five counts: text, image, link-card and reply posts alike.
+        results.Should().OnlyContain(r => r.Values.Count == 5);
+        // The first test post had one like and the thread's first part one reply; nothing was reposted, quoted or bookmarked.
+        results.Single(r => r.Id.EndsWith("/3n2jexzfz4y2d")).Values["likeCount"].Should().Be(1);
+        results.Single(r => r.Id.EndsWith("/3n2jfifbun22p")).Values["replyCount"].Should().Be(1);
+        results.Sum(r => r.Values["repostCount"] + r.Values["quoteCount"] + r.Values["bookmarkCount"]).Should().Be(0);
+    }
 
     /// <summary>Answers getPosts with a PostView for each uri asked for, except those listed as missing.</summary>
     private static List<HttpRequestMessage> ServePosts(Mock<HttpMessageHandler> handler, params string[] missing)

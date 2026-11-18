@@ -7,14 +7,22 @@ namespace UmbHost.Automate.Bluesky.Tests;
 
 /// <summary>
 /// The shared reader of networks' error answers. The source is linked into every social package, so it is tested once here, with each
-/// network's documented shape (sources in <see cref="NetworkError"/>).
+/// network's documented shape (sources in <see cref="NetworkError"/>). Rows marked "live" are answers the networks really gave during
+/// live testing on 2026-11-17 and 18 (each provider's Fixtures/Live has the file and where it came from); the rest are docs-based.
 /// </summary>
 public class NetworkErrorTests
 {
     [Theory]
-    // Graph (Facebook, Instagram, Threads): error_user_msg first, else message.
-    [InlineData("""{"error":{"message":"Invalid parameter","code":100,"error_user_msg":"You can't add more than 5 unique links to a Threads post.","fbtrace_id":"A1"}}""",
+    // Graph (Facebook, Instagram, Threads): error_user_msg first, else message. Live: Threads, 2026-11-18 (fbtrace_id redacted).
+    [InlineData("""{"error":{"message":"Invalid parameter","code":100,"type":"OAuthException","error_subcode":4279111,"is_transient":false,"error_user_msg":"You can't add more than 5 unique links to a Threads post.","error_user_title":"Total number of unique links in Threads post exceeded","fbtrace_id":"REDACTED_FBTRACE_ID"}}""",
         "You can't add more than 5 unique links to a Threads post.")]
+    // Live: Bluesky createSession with a wrong app password, 2026-11-17.
+    [InlineData("""{"error":"AuthenticationRequired","message":"Invalid identifier or password"}""", "Invalid identifier or password")]
+    // Live: Mastodon 4.7.5 with a bad token, 2026-11-18. The body has only "error"; error_description is in the WWW-Authenticate header.
+    [InlineData("""{"error":"The access token is invalid"}""", "The access token is invalid")]
+    // Live: Pinterest (sandbox) with a bad token, 2026-11-18.
+    [InlineData("""{"code":2,"message":"Authentication failed.","status":"failure"}""", "Authentication failed.")]
+    // Docs-based from here on.
     [InlineData("""{"error":{"message":"(#100) Invalid parameter","type":"OAuthException","code":100}}""", "(#100) Invalid parameter")]
     // Google (AIP-193).
     [InlineData("""{"error":{"code":400,"message":"Request contains an invalid argument.","status":"INVALID_ARGUMENT"}}""", "Request contains an invalid argument.")]

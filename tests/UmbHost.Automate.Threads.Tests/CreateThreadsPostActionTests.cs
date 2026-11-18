@@ -17,6 +17,8 @@ namespace UmbHost.Automate.Threads.Tests;
 //   parameter; alt_text up to 1,000 characters; reply_to_id; GET /{container-id}?fields=status,error_message)
 // - Replies: https://developers.facebook.com/docs/threads/retrieve-and-manage-replies/create-replies
 // - Long-lived tokens: https://developers.facebook.com/docs/threads/get-started/long-lived-tokens
+// Seen live on 2026-11-18 (Fixtures/Live): the refusal for too many links, word for word. Live posts took 12 to 28 seconds from container
+// to publish, so a container is usually not FINISHED on the first check; the status answers themselves are docs-based (not captured).
 public class CreateThreadsPostActionTests
 {
     private const string Graph = "https://graph.threads.com/";
@@ -80,6 +82,11 @@ public class CreateThreadsPostActionTests
 
         public string Status { get; set; } = "FINISHED";
 
+        /// <summary>Statuses the container checks answer first, in turn, before <see cref="Status"/>.</summary>
+        public Queue<string> StatusesFirst { get; } = new();
+
+        public int StatusChecks { get; private set; }
+
         public FakeThreads()
         {
             Handler.SetupRequest(r => Get(r, "/v1.0/me", "id,username")).Returns((HttpRequestMessage r, CancellationToken _) =>
@@ -95,8 +102,18 @@ public class CreateThreadsPostActionTests
                 Containers.Add(form);
                 return Container(Containers.Count) ?? Json($$"""{"id":"c{{Containers.Count}}"}""");
             });
+            // Docs-based (GET /{container-id}?fields=status,error_message, https://developers.facebook.com/docs/threads/reference/publishing): the
+            // container's status and id, with error_message only when the status is ERROR.
             Handler.SetupRequest(r => r.RequestUri!.AbsolutePath.StartsWith("/v1.0/c") && Get(r, r.RequestUri.AbsolutePath, "status,error_message"))
-                .Returns(() => Task.FromResult(Json($$"""{"status":"{{Status}}","error_message":"{{(Status == "ERROR" ? "FAILED_DOWNLOADING_IMAGE" : "")}}"}""")));
+                .Returns((HttpRequestMessage r, CancellationToken _) =>
+                {
+                    StatusChecks++;
+                    var status = StatusesFirst.Count > 0 ? StatusesFirst.Dequeue() : Status;
+                    var id = r.RequestUri!.AbsolutePath[6..];
+                    return Task.FromResult(Json(status == "ERROR"
+                        ? $$"""{"status":"ERROR","error_message":"FAILED_DOWNLOADING_IMAGE","id":"{{id}}"}"""
+                        : $$"""{"status":"{{status}}","id":"{{id}}"}"""));
+                });
             Handler.SetupRequest(HttpMethod.Post, Graph + "v1.0/1789/threads_publish").Returns(async (HttpRequestMessage r, CancellationToken _) =>
             {
                 var form = Form(await r.Content!.ReadAsStringAsync());
@@ -295,6 +312,43 @@ public class CreateThreadsPostActionTests
     }
 
     [Fact]
+    public async Task A_container_still_in_progress_is_checked_again_until_finished_then_published()
+    {
+        // Live posts took 12 to 28 seconds, most of it waiting here: the first checks find the container still IN_PROGRESS.
+        var threads = new FakeThreads();
+        threads.StatusesFirst.Enqueue("IN_PROGRESS");
+        threads.StatusesFirst.Enqueue("IN_PROGRESS");
+
+        var result = await Sut(threads.Handler).ExecuteAsync(ActionTestHarness.Context(new CreateThreadsPostSettings { Text = "One" }, Conn), default);
+
+        result.Status.Should().Be(ActionResultStatus.Success);
+        result.OutputData.Should().BeOfType<CreateThreadsPostOutput>().Which.PostId.Should().Be("m1");
+        threads.StatusChecks.Should().Be(3);
+        threads.Published.Should().Be(1);
+    }
+
+    [Fact]
+    public async Task A_container_never_finished_is_retried_and_nothing_is_published()
+    {
+        var threads = new FakeThreads { Status = "IN_PROGRESS" };
+
+        var result = await Sut(threads.Handler).ExecuteAsync(ActionTestHarness.Context(new CreateThreadsPostSettings { Text = "One" }, Conn), default);
+
+        result.ErrorCategory.Should().Be(StepRunErrorCategory.ServiceUnavailable);
+        result.Exception!.Message.Should().Be("Threads hadn't finished processing the post in time. Nothing was published.");
+        threads.StatusChecks.Should().Be(10);
+        threads.Published.Should().Be(0);
+    }
+
+    [Fact]
+    public void The_status_checks_allow_about_the_30_seconds_meta_suggests()
+    {
+        // Ten checks three seconds apart: the slowest live post (28.6 s, container to publish) fits; Meta suggests allowing ~30 s.
+        new CreateThreadsPostAction(ActionTestHarness.Infrastructure, new Mock<HttpMessageHandler>().CreateClientFactory(), null!)
+            .StatusPollDelay.Should().Be(TimeSpan.FromSeconds(3));
+    }
+
+    [Fact]
     public async Task A_container_threads_could_not_build_is_a_definite_failure_and_nothing_is_published()
     {
         var threads = new FakeThreads { Status = "ERROR" };
@@ -390,10 +444,9 @@ public class CreateThreadsPostActionTests
         threads.Handler.VerifyRequest(r => r.Headers.Authorization != null, Times.Never());
     }
 
-    // The answer Threads gave a live post on 2026-11-18 (fbtrace_id changed): a Graph error whose error_user_msg is
+    // The answer Threads gave a live post on 2026-11-18 (Fixtures/Live, fbtrace_id redacted): a Graph error whose error_user_msg is
     // "the message to display to the user" (https://developers.facebook.com/docs/graph-api/guides/error-handling).
-    private const string TooManyLinks =
-        """{"error":{"message":"Invalid parameter","code":100,"type":"OAuthException","error_subcode":4279111,"is_transient":false,"error_user_msg":"You can't add more than 5 unique links to a Threads post.","error_user_title":"Total number of unique links in Threads post exceeded","fbtrace_id":"AbCdEfGh123"}}""";
+    private static string TooManyLinks => LiveFixture.Text("error-too-many-links");
 
     [Fact]
     public async Task A_refused_post_reads_as_the_networks_own_words_and_the_whole_answer_goes_to_the_step_log()
@@ -407,10 +460,11 @@ public class CreateThreadsPostActionTests
         result.Exception!.Message.Should().Be("You can't add more than 5 unique links to a Threads post.");
         var logged = context.LogEntries.Should().ContainSingle().Subject;
         logged.Level.Should().Be(ActionLogLevel.Error);
-        logged.Message.Should().StartWith("Threads post preparation returned 400: {").And.Contain("\"fbtrace_id\":\"AbCdEfGh123\"");
+        logged.Message.Should().StartWith("Threads post preparation returned 400: {").And.Contain("\"fbtrace_id\":\"REDACTED_FBTRACE_ID\"");
         logged.Message.Should().NotContain("THLong").And.NotContain("access_token");
     }
 
+    // Docs-based: no expired token was seen live.
     [Fact]
     public async Task An_expired_token_answered_with_400_is_the_sign_in_not_a_refusal()
     {

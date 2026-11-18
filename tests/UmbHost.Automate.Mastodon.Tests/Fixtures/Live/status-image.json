@@ -1,0 +1,102 @@
+{
+  "id": "110000000000000002",
+  "created_at": "2026-11-18T11:22:22.610Z",
+  "in_reply_to_id": null,
+  "in_reply_to_account_id": null,
+  "sensitive": false,
+  "spoiler_text": "",
+  "visibility": "public",
+  "language": "en",
+  "uri": "https://umbracocommunity.social/ap/users/100000000000000001/statuses/110000000000000002",
+  "url": "https://umbracocommunity.social/@example/110000000000000002",
+  "replies_count": 0,
+  "reblogs_count": 0,
+  "favourites_count": 0,
+  "quotes_count": 0,
+  "edited_at": null,
+  "content": "<p>UmbSocial test 2 of the Mastodon set: an image with alt text. Please ignore - this post will be deleted.</p>",
+  "reblog": null,
+  "application": {
+    "name": "UmbSocial",
+    "website": "https://umb.social"
+  },
+  "account": {
+    "id": "100000000000000001",
+    "username": "example",
+    "acct": "example",
+    "display_name": "",
+    "locked": false,
+    "bot": false,
+    "discoverable": null,
+    "indexable": false,
+    "group": false,
+    "created_at": "2026-11-17T00:00:00.000Z",
+    "note": "",
+    "url": "https://umbracocommunity.social/@example",
+    "uri": "https://umbracocommunity.social/ap/users/100000000000000001",
+    "avatar": "https://umbracocommunity.social/avatars/original/missing.png",
+    "avatar_static": "https://umbracocommunity.social/avatars/original/missing.png",
+    "avatar_description": "",
+    "header": "https://umbracocommunity.social/headers/original/missing.png",
+    "header_static": "https://umbracocommunity.social/headers/original/missing.png",
+    "header_description": "",
+    "followers_count": 0,
+    "following_count": 0,
+    "statuses_count": 8,
+    "last_status_at": "2026-11-18",
+    "hide_collections": null,
+    "show_media": true,
+    "show_media_replies": true,
+    "show_featured": true,
+    "noindex": false,
+    "feature_approval": {
+      "automatic": [],
+      "manual": [],
+      "current_user": "denied"
+    },
+    "emojis": [],
+    "roles": [],
+    "fields": []
+  },
+  "media_attachments": [
+    {
+      "id": "120000000000000001",
+      "type": "image",
+      "url": "https://cdn.masto.host/umbracocommunitysocial/media_attachments/files/120/000/000/000/000/001/original/0123456789abcdef.jpg",
+      "preview_url": "https://cdn.masto.host/umbracocommunitysocial/media_attachments/files/120/000/000/000/000/001/small/0123456789abcdef.jpg",
+      "remote_url": null,
+      "preview_remote_url": null,
+      "text_url": null,
+      "meta": {
+        "original": {
+          "width": 1200,
+          "height": 675,
+          "size": "1200x675",
+          "aspect": 1.7777777777777777
+        },
+        "small": {
+          "width": 640,
+          "height": 360,
+          "size": "640x360",
+          "aspect": 1.7777777777777777
+        }
+      },
+      "description": "Spring launch banner: navy background with a pink circle and the words Spring launch.",
+      "blurhash": "UeEevM0e%0xZ^h9bxZt6V@RjkCofNKxZWCay"
+    }
+  ],
+  "mentions": [],
+  "tags": [],
+  "emojis": [],
+  "tagged_collections": [],
+  "quote": null,
+  "card": null,
+  "poll": null,
+  "quote_approval": {
+    "automatic": [
+      "public"
+    ],
+    "manual": [],
+    "current_user": "denied"
+  }
+}

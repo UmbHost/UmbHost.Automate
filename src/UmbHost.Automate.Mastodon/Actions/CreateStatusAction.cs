@@ -29,7 +29,7 @@ public sealed class CreateStatusAction : ActionBase<CreateStatusSettings, Create
     private const string Network = "Mastodon";
 
     // Mastodon's default image_size_limit; instances may set it lower, which the upload reports.
-    private const long MaxImageBytes = 16 * 1024 * 1024;
+    internal const long MaxImageBytes = 16 * 1024 * 1024;
     private const int MaxMediaPolls = 10;
 
     private static readonly string[] Visibilities = ["public", "unlisted", "private", "direct"];
