@@ -65,7 +65,7 @@ public sealed partial class GetPostMetricsAction : ActionBase<GetPostMetricsSett
         }
 
         var conn = context.Connection?.GetSettings<PinterestConnectionSettings>();
-        if (conn?.OAuthCredentialsId is not { } credentialsId)
+        if (conn is null)
         {
             return ActionResult.Failed(new InvalidOperationException("A Pinterest connection is required."), StepRunErrorCategory.Authentication);
         }
@@ -78,12 +78,10 @@ public sealed partial class GetPostMetricsAction : ActionBase<GetPostMetricsSett
         {
             if (valid.Count > 0)
             {
-                var token = await _credentialsService.GetValidAccessTokenAsync(credentialsId, cancellationToken);
-                if (string.IsNullOrEmpty(token))
+                var (token, error) = await PinterestApi.GetTokenAsync(conn, _credentialsService, cancellationToken);
+                if (token is null)
                 {
-                    return ActionResult.Failed(
-                        new UnauthorizedAccessException("The Pinterest token is expired or revoked. Re-authorise the connection."),
-                        StepRunErrorCategory.Authentication);
+                    return PinterestApi.NoToken(error!);
                 }
 
                 using var client = _httpClientFactory.CreateClient();
@@ -91,11 +89,16 @@ public sealed partial class GetPostMetricsAction : ActionBase<GetPostMetricsSett
 
                 foreach (var id in valid)
                 {
-                    using var response = await client.GetAsync($"https://api.pinterest.com/v5/pins/{id}?pin_metrics=true", cancellationToken);
+                    using var response = await client.GetAsync($"{PinterestApi.BaseUrl(conn)}pins/{id}?pin_metrics=true", cancellationToken);
                     var body = await response.Content.ReadAsStringAsync(cancellationToken);
                     if (response.StatusCode == HttpStatusCode.NotFound)
                     {
                         continue;
+                    }
+
+                    if (response.StatusCode == HttpStatusCode.Unauthorized && conn.SignIn == PinterestSignIn.AccessToken)
+                    {
+                        return PinterestApi.AccessTokenRejected(conn);
                     }
 
                     if (response.StatusCode == HttpStatusCode.Forbidden)
