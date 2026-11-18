@@ -69,6 +69,13 @@ public sealed class CreateThreadsPostAction : ActionBase<CreateThreadsPostSettin
             return ActionResult.Failed(new ArgumentException(threadError), StepRunErrorCategory.Validation);
         }
 
+        return ThreadParts.FirstPartFailed(await PublishAsync(context, settings, threadParts, cancellationToken), threadParts.Count + 1);
+    }
+
+    /// <summary>Signs in, prepares and posts the thread. Once the first post is live, a failure is only ever <see cref="ThreadParts.PartFailed"/>.</summary>
+    private async Task<ActionResult> PublishAsync(
+        ActionContext context, CreateThreadsPostSettings settings, IReadOnlyList<string> threadParts, CancellationToken cancellationToken)
+    {
         var conn = context.Connection?.GetSettings<ThreadsConnectionSettings>();
         if (conn?.OAuthCredentialsId is not { } credentialsId)
         {
@@ -92,7 +99,7 @@ public sealed class CreateThreadsPostAction : ActionBase<CreateThreadsPostSettin
             var meBody = await me.Content.ReadAsStringAsync(cancellationToken);
             if (!me.IsSuccessStatusCode)
             {
-                return PostOutcome.FromPreparationResponse(context, Network, "account lookup", me.StatusCode, meBody, graph: true);
+                return PostOutcome.FromPreparationResponse(context, Network, "account lookup", me.StatusCode, meBody, graph: true, headers: me.Headers);
             }
 
             using var doc = JsonDocument.Parse(meBody);
@@ -182,7 +189,7 @@ public sealed class CreateThreadsPostAction : ActionBase<CreateThreadsPostSettin
             if (!created.IsSuccessStatusCode)
             {
                 // Nothing is live until the container is published, so this is never an unknown outcome.
-                return new Part(null, PostOutcome.FromPreparationResponse(context, Network, "post preparation", created.StatusCode, createdBody, graph: true),
+                return new Part(null, PostOutcome.FromPreparationResponse(context, Network, "post preparation", created.StatusCode, createdBody, graph: true, headers: created.Headers),
                     NetworkError.Plain(Network, "post preparation", created.StatusCode, createdBody), false);
             }
 
@@ -212,7 +219,7 @@ public sealed class CreateThreadsPostAction : ActionBase<CreateThreadsPostSettin
             var body = await published.Content.ReadAsStringAsync(cancellationToken);
             if (!published.IsSuccessStatusCode)
             {
-                return new Part(null, PostOutcome.FromResponse(context, Network, published.StatusCode, body, idempotent: false, graph: true),
+                return new Part(null, PostOutcome.FromResponse(context, Network, published.StatusCode, body, idempotent: false, graph: true, headers: published.Headers),
                     NetworkError.Plain(Network, null, published.StatusCode, body), ThreadParts.IsAmbiguous(published.StatusCode));
             }
 
@@ -234,7 +241,7 @@ public sealed class CreateThreadsPostAction : ActionBase<CreateThreadsPostSettin
             var body = await response.Content.ReadAsStringAsync(cancellationToken);
             if (!response.IsSuccessStatusCode)
             {
-                return (PostOutcome.FromPreparationResponse(context, Network, "processing check", response.StatusCode, body, graph: true), NetworkError.Plain(Network, "processing check", response.StatusCode, body));
+                return (PostOutcome.FromPreparationResponse(context, Network, "processing check", response.StatusCode, body, graph: true, headers: response.Headers), NetworkError.Plain(Network, "processing check", response.StatusCode, body));
             }
 
             using var doc = JsonDocument.Parse(body);

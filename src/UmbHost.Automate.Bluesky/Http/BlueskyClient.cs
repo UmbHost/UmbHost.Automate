@@ -38,7 +38,7 @@ internal static class BlueskyClient
     /// <summary>
     /// Signs in with the app password. Returns the session, or the failed response's status and body.
     /// </summary>
-    public static async Task<(BlueskySession? Session, HttpStatusCode Status, string Body)> CreateSessionAsync(
+    public static async Task<(BlueskySession? Session, HttpStatusCode Status, string Body, HttpResponseHeaders Headers)> CreateSessionAsync(
         HttpClient client, BlueskyConnectionSettings settings, CancellationToken cancellationToken)
     {
         using var response = await client.PostAsJsonAsync(
@@ -48,7 +48,7 @@ internal static class BlueskyClient
         var body = await response.Content.ReadAsStringAsync(cancellationToken);
         if (!response.IsSuccessStatusCode)
         {
-            return (null, response.StatusCode, body);
+            return (null, response.StatusCode, body, response.Headers);
         }
 
         using var doc = JsonDocument.Parse(body);
@@ -58,6 +58,6 @@ internal static class BlueskyClient
             root.GetProperty("did").GetString()!,
             root.GetProperty("handle").GetString()!);
         client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", session.AccessJwt);
-        return (session, response.StatusCode, body);
+        return (session, response.StatusCode, body, response.Headers);
     }
 }

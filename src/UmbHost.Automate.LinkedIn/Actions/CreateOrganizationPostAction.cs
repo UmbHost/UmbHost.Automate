@@ -145,7 +145,7 @@ public sealed class CreateOrganizationPostAction : ActionBase<CreateOrganization
             if (!response.IsSuccessStatusCode)
             {
                 var body = await response.Content.ReadAsStringAsync(cancellationToken);
-                return PostOutcome.FromResponse(context, Network, response.StatusCode, body, idempotent: false);
+                return PostOutcome.FromResponse(context, Network, response.StatusCode, body, idempotent: false, headers: response.Headers);
             }
 
             // 201 with an empty body; the new post's URN is in a header.
@@ -218,7 +218,7 @@ public sealed class CreateOrganizationPostAction : ActionBase<CreateOrganization
         var initBody = await init.Content.ReadAsStringAsync(cancellationToken);
         if (!init.IsSuccessStatusCode)
         {
-            return (null, PostOutcome.FromPreparationResponse(context, Network, "image registration", init.StatusCode, initBody));
+            return (null, PostOutcome.FromPreparationResponse(context, Network, "image registration", init.StatusCode, initBody, headers: init.Headers));
         }
 
         string uploadUrl, imageUrn;
@@ -236,7 +236,7 @@ public sealed class CreateOrganizationPostAction : ActionBase<CreateOrganization
             if (!uploaded.IsSuccessStatusCode)
             {
                 return (null, PostOutcome.FromPreparationResponse(context,
-                    Network, "image upload", uploaded.StatusCode, await uploaded.Content.ReadAsStringAsync(cancellationToken)));
+                    Network, "image upload", uploaded.StatusCode, await uploaded.Content.ReadAsStringAsync(cancellationToken), headers: uploaded.Headers));
             }
         }
 
@@ -252,7 +252,7 @@ public sealed class CreateOrganizationPostAction : ActionBase<CreateOrganization
             var body = await check.Content.ReadAsStringAsync(cancellationToken);
             if (!check.IsSuccessStatusCode)
             {
-                return (null, PostOutcome.FromPreparationResponse(context, Network, "image status", check.StatusCode, body));
+                return (null, PostOutcome.FromPreparationResponse(context, Network, "image status", check.StatusCode, body, headers: check.Headers));
             }
 
             using var doc = JsonDocument.Parse(body);

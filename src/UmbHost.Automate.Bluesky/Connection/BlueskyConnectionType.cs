@@ -38,7 +38,7 @@ public sealed class BlueskyConnectionType : ConnectionTypeBase<BlueskyConnection
         using var client = BlueskyClient.Create(_httpClientFactory, typed);
         try
         {
-            var (session, status, _) = await BlueskyClient.CreateSessionAsync(client, typed, cancellationToken);
+            var (session, status, _, _) = await BlueskyClient.CreateSessionAsync(client, typed, cancellationToken);
             return session is not null
                 ? ConnectionValidationResult.Success($"Signed in as @{session.Handle}.")
                 : ConnectionValidationResult.Failure($"Bluesky rejected the sign-in ({(int)status}).");

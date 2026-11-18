@@ -440,4 +440,77 @@ public class CreateThreadsPostActionTests
         result.Exception!.Message.Should().Be("Malformed access token [redacted]");
         context.LogEntries.Should().OnlyContain(e => !e.Message.Contains(token));
     }
+
+    // Threads documents no reset header (https://developers.facebook.com/docs/threads/overview, rate limiting), so only Retry-After.
+    private static HttpResponseMessage Throttled()
+    {
+        var response = Json("""{"error":{"message":"Application request limit reached","code":4}}""", HttpStatusCode.BadRequest);
+        response.Headers.TryAddWithoutValidation("Retry-After", "Fri, 01 Jan 2100 00:00:00 GMT");
+        return response;
+    }
+
+    private const string RetryLine = """UMBSOCIAL-RETRY-AT {"retryAtUtc":"2100-01-01T00:00:00Z"}""";
+
+    [Fact]
+    public async Task A_throttled_post_says_when_the_limit_resets()
+    {
+        var threads = new FakeThreads { Container = _ => Throttled() };
+
+        var result = await Sut(threads.Handler).ExecuteAsync(ActionTestHarness.Context(new CreateThreadsPostSettings { Text = "One" }, Conn), default);
+
+        result.ErrorCategory.Should().Be(StepRunErrorCategory.RateLimiting);
+        result.Exception!.Message.Split('\n').Should().Equal("Application request limit reached", RetryLine);
+    }
+
+    [Fact]
+    public async Task A_thread_throttled_on_its_first_part_reports_part_1_after_the_reset_time()
+    {
+        var threads = new FakeThreads { Container = n => n == 1 ? Throttled() : null };
+
+        var result = await Sut(threads.Handler).ExecuteAsync(ActionTestHarness.Context(
+            new CreateThreadsPostSettings { Text = "One", ThreadParts = """["Two","Three"]""" }, Conn), default);
+
+        result.ErrorCategory.Should().Be(StepRunErrorCategory.RateLimiting);
+        result.Exception!.Message.Split('\n').Should().Equal(
+            "Application request limit reached",
+            RetryLine,
+            """UMBSOCIAL-THREAD {"failedPart":1,"total":3,"posted":[],"failedPartUnknown":false}""");
+        threads.Published.Should().Be(0);
+    }
+
+    [Fact]
+    public async Task A_thread_refused_on_its_first_publish_reports_part_1_and_keeps_its_category()
+    {
+        var threads = new FakeThreads { Publish = (n, _) => n == 1 ? Json("""{"error":{"message":"Bad text","code":100}}""", HttpStatusCode.BadRequest) : null };
+
+        var result = await Sut(threads.Handler).ExecuteAsync(ActionTestHarness.Context(
+            new CreateThreadsPostSettings { Text = "One", ThreadParts = """["Two"]""" }, Conn), default);
+
+        result.ErrorCategory.Should().Be(StepRunErrorCategory.Validation);
+        result.Exception!.Message.Split('\n').Should().Equal(
+            "Bad text", """UMBSOCIAL-THREAD {"failedPart":1,"total":2,"posted":[],"failedPartUnknown":false}""");
+    }
+
+    [Fact]
+    public async Task A_single_post_refusal_has_no_thread_line()
+    {
+        var threads = new FakeThreads { Publish = (_, _) => Json("""{"error":{"message":"Bad text","code":100}}""", HttpStatusCode.BadRequest) };
+
+        var result = await Sut(threads.Handler).ExecuteAsync(ActionTestHarness.Context(new CreateThreadsPostSettings { Text = "One" }, Conn), default);
+
+        result.ErrorCategory.Should().Be(StepRunErrorCategory.Validation);
+        result.Exception!.Message.Should().Be("Bad text");
+    }
+
+    [Fact]
+    public async Task A_thread_whose_first_part_hits_a_server_error_has_no_thread_line()
+    {
+        var threads = new FakeThreads { Container = n => n == 1 ? Json("", HttpStatusCode.BadGateway) : null };
+
+        var result = await Sut(threads.Handler).ExecuteAsync(ActionTestHarness.Context(
+            new CreateThreadsPostSettings { Text = "One", ThreadParts = """["Two"]""" }, Conn), default);
+
+        result.ErrorCategory.Should().Be(StepRunErrorCategory.ServiceUnavailable);
+        result.Exception!.Message.Should().NotContain("UMBSOCIAL-");
+    }
 }

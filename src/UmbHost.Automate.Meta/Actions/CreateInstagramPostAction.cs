@@ -71,7 +71,7 @@ public sealed class CreateInstagramPostAction : ActionBase<CreateInstagramPostSe
         var containerBody = await containerResponse.Content.ReadAsStringAsync(cancellationToken);
         if (!containerResponse.IsSuccessStatusCode)
         {
-            return PostOutcome.FromPreparationResponse(context, Network, "media container", containerResponse.StatusCode, containerBody, graph: true);
+            return PostOutcome.FromPreparationResponse(context, Network, "media container", containerResponse.StatusCode, containerBody, graph: true, headers: containerResponse.Headers);
         }
 
         string containerId;
@@ -94,7 +94,7 @@ public sealed class CreateInstagramPostAction : ActionBase<CreateInstagramPostSe
             body = await response.Content.ReadAsStringAsync(cancellationToken);
             if (!response.IsSuccessStatusCode)
             {
-                return PostOutcome.FromResponse(context, Network, response.StatusCode, body, idempotent: false, graph: true);
+                return PostOutcome.FromResponse(context, Network, response.StatusCode, body, idempotent: false, graph: true, headers: response.Headers);
             }
         }
         catch (Exception ex)
@@ -131,7 +131,7 @@ public sealed class CreateInstagramPostAction : ActionBase<CreateInstagramPostSe
             var body = await response.Content.ReadAsStringAsync(cancellationToken);
             if (!response.IsSuccessStatusCode)
             {
-                return PostOutcome.FromPreparationResponse(context, Network, "media container status", response.StatusCode, body, graph: true);
+                return PostOutcome.FromPreparationResponse(context, Network, "media container status", response.StatusCode, body, graph: true, headers: response.Headers);
             }
 
             using var doc = JsonDocument.Parse(body);

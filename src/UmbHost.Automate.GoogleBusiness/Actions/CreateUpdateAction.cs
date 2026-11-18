@@ -120,7 +120,7 @@ public sealed partial class CreateUpdateAction : ActionBase<CreateUpdateSettings
             body = await response.Content.ReadAsStringAsync(cancellationToken);
             if (!response.IsSuccessStatusCode)
             {
-                return PostOutcome.FromResponse(context, Network, response.StatusCode, body, idempotent: false);
+                return PostOutcome.FromResponse(context, Network, response.StatusCode, body, idempotent: false, headers: response.Headers);
             }
         }
         catch (Exception ex)
@@ -143,7 +143,7 @@ public sealed partial class CreateUpdateAction : ActionBase<CreateUpdateSettings
         var body = await response.Content.ReadAsStringAsync(cancellationToken);
         if (!response.IsSuccessStatusCode)
         {
-            return PostOutcome.FromPreparationResponse(context, Network, "verification check", response.StatusCode, body);
+            return PostOutcome.FromPreparationResponse(context, Network, "verification check", response.StatusCode, body, headers: response.Headers);
         }
 
         using var doc = JsonDocument.Parse(body);
