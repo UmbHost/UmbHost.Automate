@@ -113,7 +113,7 @@ public sealed partial class GetPostMetricsAction : ActionBase<GetPostMetricsSett
 
                     if (!response.IsSuccessStatusCode)
                     {
-                        return ReadOutcome.FromResponse(Network, response.StatusCode, body);
+                        return ReadOutcome.FromResponse(context, Network, response.StatusCode, body);
                     }
 
                     try

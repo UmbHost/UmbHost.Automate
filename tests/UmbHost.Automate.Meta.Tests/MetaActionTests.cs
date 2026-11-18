@@ -91,6 +91,23 @@ public class CreateFacebookPostActionTests
         result.ErrorCategory.Should().Be(StepRunErrorCategory.ConfigurationError);
     }
 
+    // Graph answers an expired page token with 400 and code 190 (https://developers.facebook.com/docs/graph-api/guides/error-handling):
+    // that is the sign-in, not a refusal of the post.
+    [Fact]
+    public async Task An_expired_page_token_is_the_sign_in_and_reads_as_metas_words()
+    {
+        var handler = new Mock<HttpMessageHandler>();
+        handler.SetupRequest(HttpMethod.Post, Graph + "123/photos").ReturnsResponse(HttpStatusCode.BadRequest,
+            """{"error":{"message":"Error validating access token: Session has expired on Tuesday, 17-Nov-26.","type":"OAuthException","code":190,"error_subcode":463,"fbtrace_id":"Fb1"}}""");
+        var context = ActionTestHarness.Context(new CreateFacebookPostSettings { Message = "Hello", ImageUrl = "https://example.com/a.jpg" }, Conn);
+
+        var result = await Sut(handler).ExecuteAsync(context, default);
+
+        result.ErrorCategory.Should().Be(StepRunErrorCategory.Authentication);
+        result.Exception!.Message.Should().Be("Error validating access token: Session has expired on Tuesday, 17-Nov-26.");
+        context.LogEntries.Should().ContainSingle(e => e.Message.StartsWith("Facebook returned 400: ") && e.Message.Contains("Fb1"));
+    }
+
     [Fact]
     public async Task Needs_message_link_or_image()
     {

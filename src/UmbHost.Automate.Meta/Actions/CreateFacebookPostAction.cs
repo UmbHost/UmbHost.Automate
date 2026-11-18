@@ -71,7 +71,7 @@ public sealed class CreateFacebookPostAction : ActionBase<CreateFacebookPostSett
                 body = await response.Content.ReadAsStringAsync(cancellationToken);
                 if (!response.IsSuccessStatusCode)
                 {
-                    return PostOutcome.FromResponse(Network, response.StatusCode, body, idempotent: false);
+                    return PostOutcome.FromResponse(context, Network, response.StatusCode, body, idempotent: false, graph: true);
                 }
             }
         }

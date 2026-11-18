@@ -92,7 +92,7 @@ public sealed partial class GetFacebookPostMetricsAction : ActionBase<GetFaceboo
         using var client = GraphClient.Create(_httpClientFactory, conn);
         foreach (var id in ids.Where(id => PostId().IsMatch(id)))
         {
-            var counts = await GraphRead.GetAsync(client, Network, $"{id}?fields={CountFields}", cancellationToken);
+            var counts = await GraphRead.GetAsync(context, client, Network, $"{id}?fields={CountFields}", cancellationToken);
             if (counts.Failure is not null)
             {
                 return counts.Failure;
@@ -114,7 +114,7 @@ public sealed partial class GetFacebookPostMetricsAction : ActionBase<GetFaceboo
                 return Unreadable(ex);
             }
 
-            var views = await GraphRead.GetAsync(client, Network, $"{id}/insights?metric=post_media_view", cancellationToken);
+            var views = await GraphRead.GetAsync(context, client, Network, $"{id}/insights?metric=post_media_view", cancellationToken);
             if (views.Failure is not null)
             {
                 return views.Failure;
