@@ -73,4 +73,7 @@ jobs:
         with:
           name: v${{ steps.ver.outputs.version }}
           generate_release_notes: true
+          # A version with a suffix (1.1.0-beta4) is a prerelease and never becomes the repo's Latest release.
+          prerelease: ${{ contains(steps.ver.outputs.version, '-') }}
+          make_latest: ${{ contains(steps.ver.outputs.version, '-') && 'false' || 'true' }}
           files: ${{ github.workspace }}/artifacts/*.nupkg
