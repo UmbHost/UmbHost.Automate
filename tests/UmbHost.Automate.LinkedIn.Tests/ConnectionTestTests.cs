@@ -93,7 +93,7 @@ public class ConnectionTestTests
         var result = await Sut(handler).ValidateAsync(Conn, default);
 
         result.Status.Should().Be(ConnectionValidationStatus.Warning);
-        result.Message.Should().StartWith("LinkedIn is connected, but this account isn't an administrator or content admin of any company page");
+        result.Message.Should().StartWith("LinkedIn is connected, but this account isn't an Administrator of any company page");
     }
 
     [Fact]
@@ -110,7 +110,7 @@ public class ConnectionTestTests
     }
 
     [Fact]
-    public async Task A_403_warns_that_listing_pages_needs_rw_organization_admin()
+    public async Task A_403_warns_to_reauthorise_as_an_administrator()
     {
         var handler = new Mock<HttpMessageHandler>();
         handler.SetupRequest(HttpMethod.Get, Acls).ReturnsResponse(HttpStatusCode.Forbidden, """{"status":403,"code":"ACCESS_DENIED"}""");
@@ -118,7 +118,7 @@ public class ConnectionTestTests
         var result = await Sut(handler).ValidateAsync(Conn, default);
 
         result.Status.Should().Be(ConnectionValidationStatus.Warning);
-        result.Message.Should().Contain("rw_organization_admin").And.Contain("Umbraco:Automate:Providers:LinkedIn:Insights");
+        result.Message.Should().Contain("rw_organization_admin").And.Contain("Administrator").And.NotContain("Insights");
     }
 
     [Fact]

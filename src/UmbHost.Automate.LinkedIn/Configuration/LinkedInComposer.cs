@@ -7,7 +7,6 @@ using Umbraco.Cms.Core.Composing;
 using Umbraco.Cms.Core.DependencyInjection;
 using UmbHost.Automate.LinkedIn.Actions;
 using UmbHost.Automate.LinkedIn.Connection;
-using UmbHost.Automate.Social;
 
 namespace UmbHost.Automate.LinkedIn.Configuration;
 
@@ -31,8 +30,11 @@ public sealed class LinkedInComposer : IComposer
 
 /// <summary>
 /// Registers LinkedIn with the OpenIddict client by hand, as a plain OAuth 2.0 provider: authorisation and token endpoints only, no
-/// userinfo, no <c>openid</c> and no <c>profile</c>. It asks for the scopes company-page posting needs on top of any configured ones,
-/// plus <c>rw_organization_admin</c> for share statistics while <c>Umbraco:Automate:Providers:LinkedIn:Insights</c> is on. Automate's
+/// userinfo, no <c>openid</c> and no <c>profile</c>. It always asks for <c>w_organization_social</c> and
+/// <c>r_organization_social</c> (posting) and <c>rw_organization_admin</c> (listing the account's pages on Test connection, and share
+/// statistics), on top of any configured ones. The Insights switch only turns the statistics reads on or off; it doesn't change the
+/// scopes, so turning it on needs no re-authorisation. <c>rw_organization_admin</c> is restricted to page Administrators
+/// (https://learn.microsoft.com/en-us/linkedin/marketing/increasing-access), so whoever authorises must be one. Automate's
 /// own configurator then applies the client id, secret, extra scopes and its callback URL
 /// (<c>umbraco/automate/oauth/callback/linkedin</c>), as it does for the built-in providers.
 /// </summary>
@@ -61,16 +63,15 @@ public sealed class LinkedInOAuthComposer : IComposer
     /// <summary>The OpenIddict provider name, also the configuration key under <c>Umbraco:Automate:Providers</c>.</summary>
     public const string ProviderName = "LinkedIn";
 
+    /// <summary>The scopes every authorisation asks for, whatever the Insights switch says.</summary>
+    internal static readonly string[] Scopes = ["w_organization_social", "r_organization_social", "rw_organization_admin"];
+
     public void Compose(IUmbracoBuilder builder)
     {
         if (string.IsNullOrWhiteSpace(builder.Config[$"Umbraco:Automate:Providers:{ProviderName}:ClientId"]))
         {
             return;
         }
-
-        string[] scopes = InsightsSwitch.IsOn(builder.Config, GetPostMetricsAction.InsightsSetting)
-            ? ["w_organization_social", "r_organization_social", "rw_organization_admin"]
-            : ["w_organization_social", "r_organization_social"];
 
         // The issuer LinkedIn's own discovery document gives (https://www.linkedin.com/oauth/.well-known/openid-configuration), which
         // the built-in provider used too. The configuration below is static, so that document is never fetched.
@@ -105,7 +106,7 @@ public sealed class LinkedInOAuthComposer : IComposer
             },
         };
 
-        foreach (var scope in scopes)
+        foreach (var scope in Scopes)
         {
             registration.Scopes.Add(scope);
         }

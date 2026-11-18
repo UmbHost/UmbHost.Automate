@@ -9,7 +9,7 @@ namespace UmbHost.Automate.LinkedIn.Connection;
 public sealed class LinkedInConnectionSettings
 {
     [Field(Label = "LinkedIn Account",
-        Description = "Authorise as a member who is an administrator or content admin of the company page. LinkedIn tokens last 60 days; re-authorise when the connection reports it has expired.",
+        Description = "Authorise as a member who is an Administrator of the company page (content admins can't connect). LinkedIn tokens last 60 days; re-authorise when the connection reports it has expired.",
         EditorUiAlias = "Umb.Automate.OAuth",
         EditorConfig = """[{ "alias": "provider", "value": "LinkedIn" }]""",
         SortOrder = 0)]

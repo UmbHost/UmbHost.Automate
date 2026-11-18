@@ -75,13 +75,19 @@ public class OAuthRegistrationTests
         scopes.Should().NotContain(OpenIddictConstants.Scopes.OpenId);
     }
 
-    [Fact]
-    public void Insights_off_asks_for_exactly_the_posting_scopes()
-        => Registration().Scopes.Should().BeEquivalentTo(["w_organization_social", "r_organization_social"]);
-
-    [Fact]
-    public void Insights_on_adds_only_rw_organization_admin()
-        => Registration("true").Scopes.Should().BeEquivalentTo(["w_organization_social", "r_organization_social", "rw_organization_admin"]);
+    /// <summary>
+    /// The Insights switch only turns the share statistics reads on or off; the scopes are the same either way, so turning it on
+    /// needs no re-authorisation. rw_organization_admin lists the account's pages on Test connection and reads share statistics.
+    /// </summary>
+    [Theory]
+    [InlineData(null)]
+    [InlineData("false")]
+    [InlineData("not a bool")]
+    [InlineData("true")]
+    [InlineData("True")]
+    [InlineData(" true ")]
+    public void Asks_for_the_same_scopes_whatever_the_insights_switch_says(string? insights)
+        => Registration(insights).Scopes.Should().BeEquivalentTo(["w_organization_social", "r_organization_social", "rw_organization_admin"]);
 
     [Fact]
     public void Configuration_has_linkedins_endpoints_and_no_userinfo()

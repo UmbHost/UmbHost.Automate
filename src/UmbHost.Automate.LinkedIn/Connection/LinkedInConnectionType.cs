@@ -52,7 +52,7 @@ public sealed class LinkedInConnectionType : OAuthConnectionTypeBase<LinkedInCon
     /// <c>GET /rest/organizationAcls?q=roleAssignee</c> and each page's name from <c>GET /rest/organizations/{id}</c>
     /// (https://learn.microsoft.com/en-us/linkedin/marketing/community-management/organizations/organization-access-control-by-role and
     /// .../organizations/organization-lookup-api). Both pages list <c>rw_organization_admin</c> as the permission, which the connection
-    /// only asks for while the Insights switch is on; without it LinkedIn answers 403 and the test warns rather than fails.
+    /// always asks for. A 403 (a token from before it did, or an app without the permission) warns rather than fails.
     /// </summary>
     public override async Task<ConnectionValidationResult> ValidateAsync(object? settings, CancellationToken cancellationToken)
     {
@@ -83,10 +83,10 @@ public sealed class LinkedInConnectionType : OAuthConnectionTypeBase<LinkedInCon
                 if (response.StatusCode == HttpStatusCode.Forbidden)
                 {
                     return ConnectionValidationResult.Warning(
-                        "LinkedIn is connected, but it won't list the pages this account can post as. Listing them needs the " +
-                        "rw_organization_admin permission, which the connection asks for only while " +
-                        "Umbraco:Automate:Providers:LinkedIn:Insights is on (then re-authorise). Posting doesn't need it: take the " +
-                        "page's id from its admin URL, linkedin.com/company/<id>/admin.",
+                        "LinkedIn is connected, but it won't list the pages this account can post as (403). Listing them needs " +
+                        "the rw_organization_admin permission: check the app has the Community Management API, and re-authorise " +
+                        "the connection as an Administrator of the page. Meanwhile the page's id is in its admin URL, " +
+                        "linkedin.com/company/<id>/admin.",
                         [body]);
                 }
 
@@ -121,8 +121,8 @@ public sealed class LinkedInConnectionType : OAuthConnectionTypeBase<LinkedInCon
             if (organizations.Count == 0)
             {
                 return ConnectionValidationResult.Warning(
-                    "LinkedIn is connected, but this account isn't an administrator or content admin of any company page, so it " +
-                    "can't post as one. Give it a page role, or authorise as a member who has one.");
+                    "LinkedIn is connected, but this account isn't an Administrator of any company page, so it can't post as one. " +
+                    "Make it an Administrator of the page, or authorise as a member who is.");
             }
 
             var lines = new List<string>(organizations.Count);
