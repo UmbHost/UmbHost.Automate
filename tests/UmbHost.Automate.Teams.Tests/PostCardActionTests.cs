@@ -82,9 +82,15 @@ public class PostCardActionTests
 
     [Theory]
     [InlineData(200, null)]
+    [InlineData(201, null)]
     [InlineData(202, null)]
+    [InlineData(204, null)]
+    [InlineData(301, StepRunErrorCategory.Validation)]
+    [InlineData(302, StepRunErrorCategory.Validation)]
+    [InlineData(307, StepRunErrorCategory.Validation)]
     [InlineData(429, StepRunErrorCategory.RateLimiting)]
     [InlineData(400, StepRunErrorCategory.Validation)]
+    [InlineData(401, StepRunErrorCategory.Validation)]
     [InlineData(403, StepRunErrorCategory.Validation)]
     [InlineData(404, StepRunErrorCategory.Validation)]
     [InlineData(500, StepRunErrorCategory.ConfigurationError)]
@@ -144,6 +150,42 @@ public class PostCardActionTests
         result.ErrorCategory.Should().Be(StepRunErrorCategory.Validation);
         result.Exception!.Message.Should().StartWith("Teams refused the post: the Workflow may have been deleted or switched off.")
             .And.Contain(status.ToString()).And.Contain(Host);
+    }
+
+    [Theory]
+    [InlineData(301)]
+    [InlineData(302)]
+    [InlineData(307)]
+    [InlineData(308)]
+    public async Task a_redirect_is_a_terminal_failure_that_says_nothing_was_sent(int status)
+    {
+        var handler = new RecordingHandler(r => new HttpResponseMessage((HttpStatusCode)status)
+        {
+            Headers = { Location = new Uri("https://evil.example/next") },
+        });
+
+        var result = await Run(handler, new PostCardSettings { Text = "Hi" });
+
+        handler.Requests.Should().ContainSingle();
+        result.ErrorCategory.Should().Be(StepRunErrorCategory.Validation);
+        result.Exception!.Message.Should().StartWith("Teams answered with a redirect, which is never followed. Check the Workflow address.")
+            .And.Contain(status.ToString()).And.Contain(Host)
+            .And.NotContain("may have been published").And.NotContain("evil.example");
+    }
+
+    [Theory]
+    [InlineData(401)]
+    [InlineData(403)]
+    public async Task a_refused_trigger_is_a_terminal_failure_without_sign_in_wording(int status)
+    {
+        var handler = new RecordingHandler((HttpStatusCode)status, "{\"error\":{\"message\":\"secret detail\"}}");
+
+        var result = await Run(handler, new PostCardSettings { Text = "Hi" });
+
+        result.ErrorCategory.Should().Be(StepRunErrorCategory.Validation);
+        result.Exception!.Message.Should().StartWith("Teams refused the post: the Workflow's address no longer works, or its trigger isn't set to Anyone.")
+            .And.Contain(status.ToString()).And.Contain(Host)
+            .And.NotContain("secret detail");
     }
 
     [Fact]

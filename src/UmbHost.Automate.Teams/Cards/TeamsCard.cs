@@ -103,9 +103,12 @@ internal static class TeamsCard
         Encoding.UTF8.GetBytes(message.ToJsonString(WireOptions));
 
     /// <summary>
-    /// Makes TextBlock show the text as typed. TextBlock renders a Markdown subset, so the Markdown
-    /// characters are backslash-escaped, as is a line-leading list marker (<c>-</c>, <c>+</c>,
-    /// <c>1.</c>). HTML is not rendered by TextBlock and is left alone. Kept in one place so the
+    /// Makes TextBlock show the text as typed. In Teams a TextBlock renders only bold, italic,
+    /// lists and <c>[text](url)</c> links, so only what can start those is backslash-escaped:
+    /// <c>\ * _ [ ]</c>, and a line-leading list marker (<c>-</c>, <c>+</c>, <c>*</c>, <c>1.</c>)
+    /// after up to three spaces. Anything else (<c>#</c>, <c>(</c>, <c>~</c>, backticks, HTML) shows
+    /// as typed without help. An http or https address typed in the text is left exactly as typed,
+    /// so links such as <c>…/page#part</c> or <c>…/my_page</c> still work. Kept in one place so the
     /// rule can change if a live check against Teams shows a different need.
     /// </summary>
     internal static string Escape(string text)
@@ -115,33 +118,35 @@ internal static class TeamsCard
 
         for (var i = 0; i < text.Length; i++)
         {
-            var c = text[i];
-
             if (lineStart)
             {
-                if ((c == '-' || c == '+') && i + 1 < text.Length && text[i + 1] == ' ')
+                lineStart = false;
+
+                var spaces = 0;
+                while (spaces < 4 && i + spaces < text.Length && text[i + spaces] == ' ')
                 {
-                    sb.Append(Backslash).Append(c);
-                    lineStart = false;
-                    continue;
+                    spaces++;
                 }
 
-                var digits = 0;
-                while (i + digits < text.Length && char.IsAsciiDigit(text[i + digits]))
+                if (spaces <= 3 && TryListMarker(text, i + spaces, out var markerLength))
                 {
-                    digits++;
-                }
-
-                if (digits > 0 && i + digits + 1 < text.Length && text[i + digits] == '.' && text[i + digits + 1] == ' ')
-                {
-                    sb.Append(text, i, digits).Append(Backslash).Append('.');
-                    i += digits;
-                    lineStart = false;
+                    // The spaces and any digits as typed, then the escaped marker character.
+                    sb.Append(text, i, spaces + markerLength - 1).Append(Backslash).Append(text[i + spaces + markerLength - 1]);
+                    i += spaces + markerLength - 1;
                     continue;
                 }
             }
 
-            if (c is Backslash or '*' or '_' or '#' or '[' or ']' or '(' or ')' or '~' or '`')
+            var urlLength = UrlLength(text, i);
+            if (urlLength > 0)
+            {
+                sb.Append(text, i, urlLength);
+                i += urlLength - 1;
+                continue;
+            }
+
+            var c = text[i];
+            if (c is Backslash or '*' or '_' or '[' or ']')
             {
                 sb.Append(Backslash);
             }
@@ -151,6 +156,65 @@ internal static class TeamsCard
         }
 
         return sb.ToString();
+    }
+
+    /// <summary>A list marker at <paramref name="at"/>: <c>-</c>, <c>+</c> or <c>*</c>, or digits and <c>.</c>, then a space.</summary>
+    private static bool TryListMarker(string text, int at, out int length)
+    {
+        length = 0;
+        if (at >= text.Length)
+        {
+            return false;
+        }
+
+        if (text[at] is '-' or '+' or '*')
+        {
+            length = 1;
+        }
+        else
+        {
+            var digits = 0;
+            while (at + digits < text.Length && char.IsAsciiDigit(text[at + digits]))
+            {
+                digits++;
+            }
+
+            if (digits == 0 || at + digits >= text.Length || text[at + digits] != '.')
+            {
+                return false;
+            }
+
+            length = digits + 1;
+        }
+
+        return at + length < text.Length && text[at + length] == ' ';
+    }
+
+    /// <summary>The length of an http or https address starting at <paramref name="at"/> (up to the next whitespace), or 0.</summary>
+    private static int UrlLength(string text, int at)
+    {
+        var rest = text.AsSpan(at);
+        int scheme;
+        if (rest.StartsWith("https://", StringComparison.OrdinalIgnoreCase))
+        {
+            scheme = 8;
+        }
+        else if (rest.StartsWith("http://", StringComparison.OrdinalIgnoreCase))
+        {
+            scheme = 7;
+        }
+        else
+        {
+            return 0;
+        }
+
+        var length = scheme;
+        while (length < rest.Length && !char.IsWhiteSpace(rest[length]))
+        {
+            length++;
+        }
+
+        return length > scheme ? length : 0;
     }
 
     /// <summary>

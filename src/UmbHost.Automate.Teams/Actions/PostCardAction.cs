@@ -94,7 +94,8 @@ public sealed partial class PostCardAction : ActionBase<PostCardSettings, PostCa
         using (response)
         {
             var status = response.StatusCode;
-            if (status is HttpStatusCode.OK or HttpStatusCode.Accepted)
+            var code = (int)status;
+            if (code is >= 200 and <= 299)
             {
                 return Success(new PostCardOutput
                 {
@@ -103,7 +104,24 @@ public sealed partial class PostCardAction : ActionBase<PostCardSettings, PostCa
                 });
             }
 
-            var detail = $"status {(int)status} from {host}" + await ErrorCodeAsync(response, cancellationToken);
+            if (code is >= 300 and <= 399)
+            {
+                // The client never follows a redirect, so nothing reached Teams: terminal, and not "may have posted".
+                return ActionResult.Failed(
+                    new InvalidOperationException($"Teams answered with a redirect, which is never followed. Check the Workflow address. (status {code} from {host})"),
+                    StepRunErrorCategory.Validation);
+            }
+
+            var detail = $"status {code} from {host}" + await ErrorCodeAsync(response, cancellationToken);
+
+            if (status is HttpStatusCode.Unauthorized or HttpStatusCode.Forbidden)
+            {
+                // Validation, not Authentication: a Workflows webhook has no sign-in, and Authentication
+                // makes Social tell the editor to sign in again.
+                return ActionResult.Failed(
+                    new InvalidOperationException($"Teams refused the post: the Workflow's address no longer works, or its trigger isn't set to Anyone. ({detail})"),
+                    StepRunErrorCategory.Validation);
+            }
 
             if (status is HttpStatusCode.NotFound or HttpStatusCode.BadRequest)
             {

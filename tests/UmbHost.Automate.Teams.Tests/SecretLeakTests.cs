@@ -9,7 +9,7 @@ public class SecretLeakTests
 {
     private const string Echo = "{\"error\":{\"code\":\"X\",\"message\":\"bad " + PostCardTestSupport.Address + "\"}}";
 
-    public static TheoryData<string> Cases() => new() { "success", "404", "500", "timeout", "network" };
+    public static TheoryData<string> Cases() => new() { "success", "302", "401", "403", "404", "500", "timeout", "network" };
 
     [Theory]
     [MemberData(nameof(Cases))]
@@ -18,6 +18,13 @@ public class SecretLeakTests
         var handler = kind switch
         {
             "success" => new RecordingHandler(HttpStatusCode.Accepted, Echo),
+            "302" => new RecordingHandler(_ => new HttpResponseMessage(HttpStatusCode.Found)
+            {
+                Content = new StringContent(Echo),
+                Headers = { Location = new Uri(PostCardTestSupport.Address) },
+            }),
+            "401" => new RecordingHandler(HttpStatusCode.Unauthorized, Echo),
+            "403" => new RecordingHandler(HttpStatusCode.Forbidden, Echo),
             "404" => new RecordingHandler(HttpStatusCode.NotFound, Echo),
             "500" => new RecordingHandler(HttpStatusCode.InternalServerError, Echo),
             "timeout" => new RecordingHandler(r => throw new TaskCanceledException("timed out calling " + r.RequestUri)),

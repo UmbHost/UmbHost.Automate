@@ -21,6 +21,15 @@ internal sealed class TeamsWebhookClient
     /// Registers <see cref="ClientName"/>. A redirect is reported, never followed, so a webhook
     /// can't send the card (and its signature) on to another host.
     /// </summary>
+    /// <remarks>
+    /// Core first: Umbraco Automate already registers a non-redirecting client,
+    /// <c>Constants.HttpClients.NoRedirect</c> ("UmbracoAutomateNoRedirect", with its SSRF handler).
+    /// It isn't used here because it keeps HttpClientFactory's default logging handlers, which log
+    /// the request address and so the secret workflow path; and its SSRF handler blocks private
+    /// ranges, while this provider needs the stricter fixed Microsoft-host allow-list, checked
+    /// before every send. This client is the smallest thing that does both; it can move to
+    /// Automate's client if that one ever stops logging the address.
+    /// </remarks>
     public static void Register(IServiceCollection services)
         => services.AddHttpClient(ClientName, client => client.Timeout = TimeSpan.FromSeconds(30))
                    // The default logging handlers log the request address, and the workflow path is a secret.

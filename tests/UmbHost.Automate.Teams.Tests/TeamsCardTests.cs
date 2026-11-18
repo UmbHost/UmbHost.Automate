@@ -78,18 +78,40 @@ public class TeamsCardTests
     [Theory]
     [InlineData("*bold*", @"\*bold\*")]
     [InlineData("_x_", @"\_x\_")]
-    [InlineData("# heading", @"\# heading")]
-    [InlineData("[a](https://b)", @"\[a\]\(https://b\)")]
+    [InlineData("# heading", "# heading")]
+    [InlineData("[a](https://b)", @"\[a\](https://b)")]
     [InlineData("<b>hi</b>", "<b>hi</b>")]
     [InlineData("1. item", @"1\. item")]
     [InlineData("- item", @"\- item")]
     [InlineData("+ item", @"\+ item")]
-    [InlineData("a ~b~ `c` \\d", @"a \~b\~ \`c\` \\d")]
+    [InlineData("* item", @"\* item")]
+    [InlineData("   - item", @"   \- item")]
+    [InlineData("  12. item", @"  12\. item")]
+    [InlineData("a - b + c 1. d", "a - b + c 1. d")]
+    [InlineData("a ~b~ `c` (d) \\e", @"a ~b~ `c` (d) \\e")]
     [InlineData("line one\n- two\n2. three", "line one\n\\- two\n2\\. three")]
     public void text_shows_as_written(string input, string expected)
     {
         TeamsCard.Escape(input).Should().Be(expected);
         Body(TeamsCard.Message(input, null, null, null, null))[0]!["text"]!.GetValue<string>().Should().Be(expected);
+    }
+
+    [Theory]
+    [InlineData("See https://site.example/page#section")]
+    [InlineData("https://site.example/my_page")]
+    [InlineData("Read https://en.wikipedia.org/wiki/Foo_(bar) today")]
+    [InlineData("http://intranet/news/a_b*c[d]")]
+    [InlineData("HTTPS://SITE.EXAMPLE/My_Page")]
+    public void links_typed_in_the_text_are_left_as_written(string input)
+    {
+        TeamsCard.Escape(input).Should().Be(input);
+    }
+
+    [Fact]
+    public void text_around_a_link_is_still_escaped()
+    {
+        TeamsCard.Escape("_x_ https://site.example/a_b *y*\n- https://site.example/c_d")
+            .Should().Be(@"\_x\_ https://site.example/a_b \*y\*" + "\n" + @"\- https://site.example/c_d");
     }
 
     [Fact]

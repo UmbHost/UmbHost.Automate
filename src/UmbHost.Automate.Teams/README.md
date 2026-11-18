@@ -14,7 +14,9 @@ Requires Umbraco Automate 17.4+ / 18.4+ and Umbraco CMS 17.6+.
    ```
 
    Environment variable form: `Umbraco__Automate__Secrets__TeamsWebhookUrl`.
-3. **Automate → Connections → Create → Microsoft Teams.** Press **Test**: it posts one test card to the channel or chat.
+
+   **Each Teams connection needs its own secret.** For a second destination, add another key (for example `TeamsCompanyNewsWebhookUrl`) and set that connection's **Workflow address** to `$Umbraco:Automate:Secrets:TeamsCompanyNewsWebhookUrl`. A second connection left on the default posts into the first one's channel or chat.
+3. **Automate → Connections → Create → Microsoft Teams.** Press **Test connection**: it posts one test card to the channel or chat. Keep the Workflow trigger's **Who can trigger** set to **Anyone**.
 
 The address must be an `https://` address on a Microsoft Workflows host (`*.logic.azure.com` or `*.api.powerplatform.com`). A redirect is never followed.
 
@@ -32,6 +34,6 @@ Output: `accepted`, `note`. Teams gives no post id or address, so there is no po
 
 ## Retries
 
-Teams has no idempotency key. A 429 is retried. A 5xx, a timeout or a network error fails **without** retrying and says the post may exist, because a retry could post twice. A 400 or 404 usually means the Workflow was deleted or switched off.
+Teams has no idempotency key. A 429 is retried. A 5xx, a timeout or a network error fails **without** retrying and says the post may exist, because a retry could post twice. A 400 or 404 usually means the Workflow was deleted or switched off. A 401 or 403 means the address no longer works or the trigger isn't set to **Anyone**. A redirect is never followed and fails without anything being sent.
 
 Failures name the host and the status only. Teams' own error text can contain the Workflow's id, which is part of the secret address, so it is never put in a message or log.
