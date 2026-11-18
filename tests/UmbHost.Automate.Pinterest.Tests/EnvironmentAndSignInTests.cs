@@ -178,7 +178,8 @@ public class EnvironmentAndSignInTests
     public async Task A_rejected_access_token_says_to_regenerate_it()
     {
         var handler = new Mock<HttpMessageHandler>();
-        handler.SetupAnyRequest().ReturnsResponse(HttpStatusCode.Unauthorized, """{"code":2,"message":"Authentication failed."}""");
+        // The sandbox's real answer to a bad token (Fixtures/Live, 2026-11-18).
+        handler.SetupAnyRequest().ReturnsResponse(HttpStatusCode.Unauthorized, LiveFixture.Text("error-401"));
         var conn = Conn(PinterestEnvironment.Sandbox, PinterestSignIn.AccessToken);
 
         var test = await Connection(handler).ValidateAsync(conn, default);

@@ -6,7 +6,7 @@ Requires Umbraco Automate 17.5+ / 18.5+, `Umbraco.Automate.OpenIddict` 17.1.5+, 
 
 ## Testing status
 
-This package is tested against mocked Pinterest API responses only, built from Pinterest's published API v5 description. It has not been run against the live Pinterest API.
+**Checked live** on 2026-11-18 against the Pinterest sandbox, with an access token: an image Pin with a title, description, link and alt text, a scheduled Pin, and a swapped token refused with 401 (shown as the message to generate a new Sandbox token) and then retried. The account, board, Pin and Pin-metrics answers read afterwards showed outbound clicks as `outbound_click` (the API description's example says `clickthrough`), which the metrics now read. The tests use those answers (`tests/UmbHost.Automate.Pinterest.Tests/Fixtures/Live`); the other responses are mocked from Pinterest's published API v5 description. Production hasn't been checked live.
 
 ## Setup
 
@@ -89,7 +89,7 @@ Reads each Pin's lifetime metrics with one `GET /v5/pins/{pin_id}?pin_metrics=tr
 |---|---|
 | Ids | A JSON array of 1 to 100 Pin ids. |
 
-Output: `results`, one per id in order, each with `id`, `state`, `values` and `reason`. Values use the names Pinterest's `pin_metrics` sends: `impression`, `save` (when Pinterest includes it), `pin_click`, `clickthrough` (outbound clicks), `reaction` and `comment`. Other outcomes:
+Output: `results`, one per id in order, each with `id`, `state`, `values` and `reason`. Values use the names Pinterest's `pin_metrics` sends: `impression`, `save`, `pin_click`, `outbound_click` (outbound clicks), `reaction` and `comment`, each when Pinterest sends it as a number. (Pinterest's API description calls outbound clicks `clickthrough`; the live API sends `outbound_click`. `clickthrough` is passed on too, should it ever be sent.) Other outcomes:
 
 - A Pin Pinterest can't find (404) is `gone`.
 - A Pin the account can't read (403) is `needsPermission` with reason `scope_missing`.

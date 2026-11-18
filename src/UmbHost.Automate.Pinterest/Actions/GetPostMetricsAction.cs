@@ -10,8 +10,8 @@ using UmbHost.Automate.Social;
 namespace UmbHost.Automate.Pinterest.Actions;
 
 /// <summary>
-/// Reads each Pin's lifetime metrics under the names Pinterest's <c>pin_metrics</c> uses: <c>impression</c>, <c>save</c> (when sent),
-/// <c>pin_click</c>, <c>clickthrough</c>, <c>reaction</c> and <c>comment</c>.
+/// Reads each Pin's lifetime metrics under the names Pinterest's <c>pin_metrics</c> uses: <c>impression</c>, <c>save</c>,
+/// <c>pin_click</c>, <c>outbound_click</c>, <c>reaction</c> and <c>comment</c> (and <c>clickthrough</c>, should Pinterest send it).
 /// </summary>
 /// <remarks>
 /// <para>
@@ -21,8 +21,10 @@ namespace UmbHost.Automate.Pinterest.Actions;
 /// created before 2023-03-20 lifetime metrics will only be available for Video and Idea Pin formats.") and the
 /// <c>Pin.pin_metrics</c> example (<c>90d</c> and <c>lifetime_metrics</c>):
 /// https://raw.githubusercontent.com/pinterest/api-description/main/v5/openapi.yaml.
-/// The spec types <c>pin_metrics</c> only as an object with that example, so only the known names are passed on; <c>save</c> isn't in
-/// the example and is kept only when Pinterest sends it.
+/// The spec types <c>pin_metrics</c> only as an object with that example, so only the known names are passed on, each only when
+/// Pinterest sends it as a number. The example names outbound clicks <c>clickthrough</c>, but the live sandbox answer on 2026-11-18
+/// sent <c>outbound_click</c> (and <c>save</c>, which the example lacks, plus <c>profile_visit</c> and <c>user_follow</c> as null), so
+/// <c>outbound_click</c> is read and <c>clickthrough</c> is kept for an answer shaped like the example.
 /// </para>
 /// <para>
 /// A 404 is <c>gone</c>; a 403 is <c>needsPermission</c> with <c>scope_missing</c> for that Pin; a Pin without lifetime metrics is
@@ -39,7 +41,7 @@ public sealed partial class GetPostMetricsAction : ActionBase<GetPostMetricsSett
 {
     private const string Network = "Pinterest";
 
-    private static readonly string[] MetricNames = ["impression", "save", "pin_click", "clickthrough", "reaction", "comment"];
+    private static readonly string[] MetricNames = ["impression", "save", "pin_click", "outbound_click", "clickthrough", "reaction", "comment"];
 
     private readonly IHttpClientFactory _httpClientFactory;
     private readonly IOAuthCredentialsService _credentialsService;
