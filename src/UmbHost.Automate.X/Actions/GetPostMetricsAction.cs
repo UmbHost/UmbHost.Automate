@@ -130,7 +130,7 @@ public sealed partial class GetPostMetricsAction : ActionBase<GetPostMetricsSett
                     var body = await response.Content.ReadAsStringAsync(cancellationToken);
                     if (!response.IsSuccessStatusCode)
                     {
-                        return ReadOutcome.FromResponse(Network, response.StatusCode, body);
+                        return ReadOutcome.FromResponse(context, Network, response.StatusCode, body);
                     }
 
                     try

@@ -88,7 +88,7 @@ public sealed class CreatePostAction : ActionBase<CreatePostSettings, CreatePost
 
         if (!string.IsNullOrWhiteSpace(settings.ImageUrl))
         {
-            var (mediaId, failure) = await UploadImageAsync(client, settings, cancellationToken);
+            var (mediaId, failure) = await UploadImageAsync(context, client, settings, cancellationToken);
             if (failure is not null)
             {
                 return failure;
@@ -97,7 +97,7 @@ public sealed class CreatePostAction : ActionBase<CreatePostSettings, CreatePost
             post["media"] = new JsonObject { ["media_ids"] = new JsonArray(mediaId) };
         }
 
-        var (firstId, firstFailure, _, _) = await SendAsync(client, post, cancellationToken);
+        var (firstId, firstFailure, _, _) = await SendAsync(context, client, post, cancellationToken);
         if (firstId is null)
         {
             return firstFailure!;
@@ -118,7 +118,7 @@ public sealed class CreatePostAction : ActionBase<CreatePostSettings, CreatePost
             bool unknown;
             try
             {
-                (id, _, detail, unknown) = await SendAsync(client, part, cancellationToken);
+                (id, _, detail, unknown) = await SendAsync(context, client, part, cancellationToken);
             }
             catch (Exception ex)
             {
@@ -143,7 +143,7 @@ public sealed class CreatePostAction : ActionBase<CreatePostSettings, CreatePost
 
     /// <summary>Creates one post. On failure returns the step failure (first post) and a plain detail (later parts).</summary>
     private static async Task<(string? Id, ActionResult? Failure, string? Detail, bool Unknown)> SendAsync(
-        HttpClient client, JsonObject post, CancellationToken cancellationToken)
+        ActionContext context, HttpClient client, JsonObject post, CancellationToken cancellationToken)
     {
         string body;
         try
@@ -152,7 +152,7 @@ public sealed class CreatePostAction : ActionBase<CreatePostSettings, CreatePost
             body = await response.Content.ReadAsStringAsync(cancellationToken);
             if (!response.IsSuccessStatusCode)
             {
-                return (null, PostOutcome.FromResponse(Network, response.StatusCode, body, idempotent: false), $"{Network} returned {(int)response.StatusCode}: {body}", ThreadParts.IsAmbiguous(response.StatusCode));
+                return (null, PostOutcome.FromResponse(context, Network, response.StatusCode, body, idempotent: false), NetworkError.Plain(Network, null, response.StatusCode, body), ThreadParts.IsAmbiguous(response.StatusCode));
             }
 
             // Read inside the try: X accepted the post, so an answer that can't be read leaves it live, never retried.
@@ -169,7 +169,7 @@ public sealed class CreatePostAction : ActionBase<CreatePostSettings, CreatePost
     }
 
     private async Task<(string? MediaId, ActionResult? Failure)> UploadImageAsync(
-        HttpClient client, CreatePostSettings settings, CancellationToken cancellationToken)
+        ActionContext context, HttpClient client, CreatePostSettings settings, CancellationToken cancellationToken)
     {
         var (image, imageError) = await _imageFetcher.FetchAsync(settings.ImageUrl!, MaxImageBytes, cancellationToken);
         if (image is null)
@@ -187,7 +187,7 @@ public sealed class CreatePostAction : ActionBase<CreatePostSettings, CreatePost
         var uploadBody = await upload.Content.ReadAsStringAsync(cancellationToken);
         if (!upload.IsSuccessStatusCode)
         {
-            return (null, PostOutcome.FromPreparationResponse(Network, "image upload", upload.StatusCode, uploadBody));
+            return (null, PostOutcome.FromPreparationResponse(context, Network, "image upload", upload.StatusCode, uploadBody));
         }
 
         string mediaId;
@@ -204,7 +204,7 @@ public sealed class CreatePostAction : ActionBase<CreatePostSettings, CreatePost
                 cancellationToken);
             if (!alt.IsSuccessStatusCode)
             {
-                return (null, PostOutcome.FromPreparationResponse(
+                return (null, PostOutcome.FromPreparationResponse(context,
                     Network, "image alt text", alt.StatusCode, await alt.Content.ReadAsStringAsync(cancellationToken)));
             }
         }

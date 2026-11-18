@@ -105,7 +105,7 @@ public sealed partial class GetPostMetricsAction : ActionBase<GetPostMetricsSett
             using var client = _httpClientFactory.CreateClient();
             foreach (var id in valid)
             {
-                var failure = await ReadAsync(client, id, token, settled, cancellationToken);
+                var failure = await ReadAsync(context, client, id, token, settled, cancellationToken);
                 if (failure is not null)
                 {
                     return failure;
@@ -119,7 +119,7 @@ public sealed partial class GetPostMetricsAction : ActionBase<GetPostMetricsSett
 
     /// <summary>Reads one post into <paramref name="settled"/>; returns a step failure, or null.</summary>
     private static async Task<ActionResult?> ReadAsync(
-        HttpClient client, string id, string token, Dictionary<string, PostMetricsResult> settled, CancellationToken cancellationToken)
+        ActionContext context, HttpClient client, string id, string token, Dictionary<string, PostMetricsResult> settled, CancellationToken cancellationToken)
     {
         string body;
         try
@@ -143,7 +143,7 @@ public sealed partial class GetPostMetricsAction : ActionBase<GetPostMetricsSett
                         settled[id] = PostMetricsResult.Unavailable(id, PostMetricsReason.Rejected);
                         return null;
                     default:
-                        return GraphError.Fail(Network, kind, response.StatusCode, body);
+                        return GraphError.Fail(context, Network, kind, response.StatusCode, body);
                 }
             }
         }

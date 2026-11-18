@@ -116,10 +116,12 @@ internal static class PostMetricsIds
 internal static class ReadOutcome
 {
     /// <summary>401 → Authentication; 429 → RateLimiting; 408 and 5xx → ServiceUnavailable; any other 4xx → Validation.</summary>
-    public static ActionResult FromResponse(string network, HttpStatusCode status, string body)
+    /// <remarks>The step's error is the network's own words; the whole answer goes to the step's log (see <see cref="NetworkError"/>).</remarks>
+    public static ActionResult FromResponse(ActionContext? context, string network, HttpStatusCode status, string body)
     {
         var code = (int)status;
-        var detail = $"{network} returned {code}: {(body.Length <= 500 ? body : body[..500] + "…")}";
+        NetworkError.Log(context, network, null, status, body);
+        var detail = NetworkError.Plain(network, null, status, body);
         var category = status switch
         {
             HttpStatusCode.Unauthorized => StepRunErrorCategory.Authentication,

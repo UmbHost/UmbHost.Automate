@@ -28,9 +28,11 @@
   </PropertyGroup>
 
   <!-- 17.4.0 is the first Automate release that registers its SSRF-protected outbound HTTP client,
-       which image downloads go through (see Shared/ImageFetcher.cs). It needs Umbraco CMS 17.6+, hence the CMS floor. -->
+       which image downloads go through (see Shared/ImageFetcher.cs). It needs Umbraco CMS 17.6+, hence the CMS floor.
+       17.5.0 is the first that keeps an action's own log with the step run (ActionContext.LogError, redacted by its sanitiser), where
+       a failed request's whole answer goes (see Shared/NetworkError.cs). -->
   <ItemGroup>
-    <PackageReference Include="Umbraco.Automate.Core" Version="[17.4.0, 19.0.0)" />
+    <PackageReference Include="Umbraco.Automate.Core" Version="[17.5.0, 19.0.0)" />
     <PackageReference Include="Umbraco.Cms.Core" Version="[17.6.0, 19.0.0)" />
   </ItemGroup>
 

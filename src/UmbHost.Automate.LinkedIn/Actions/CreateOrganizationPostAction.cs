@@ -123,7 +123,7 @@ public sealed class CreateOrganizationPostAction : ActionBase<CreateOrganization
 
         if (hasImage)
         {
-            var (imageUrn, failure) = await UploadImageAsync(client, token, author, settings.ImageUrl!, cancellationToken);
+            var (imageUrn, failure) = await UploadImageAsync(context, client, token, author, settings.ImageUrl!, cancellationToken);
             if (failure is not null)
             {
                 return failure;
@@ -145,7 +145,7 @@ public sealed class CreateOrganizationPostAction : ActionBase<CreateOrganization
             if (!response.IsSuccessStatusCode)
             {
                 var body = await response.Content.ReadAsStringAsync(cancellationToken);
-                return PostOutcome.FromResponse(Network, response.StatusCode, body, idempotent: false);
+                return PostOutcome.FromResponse(context, Network, response.StatusCode, body, idempotent: false);
             }
 
             // 201 with an empty body; the new post's URN is in a header.
@@ -162,7 +162,7 @@ public sealed class CreateOrganizationPostAction : ActionBase<CreateOrganization
         {
             warning = postUrn.Length == 0
                 ? "The post was published but LinkedIn did not return its id, so the first comment was not added."
-                : await AddFirstCommentAsync(client, postUrn, author, settings.FirstComment, cancellationToken);
+                : await AddFirstCommentAsync(context, client, postUrn, author, settings.FirstComment, cancellationToken);
         }
 
         return Success(new CreateOrganizationPostOutput
@@ -175,7 +175,7 @@ public sealed class CreateOrganizationPostAction : ActionBase<CreateOrganization
 
     /// <summary>Comments on the new post as its author. Returns a warning when that fails, or null on success.</summary>
     private static async Task<string?> AddFirstCommentAsync(
-        HttpClient client, string postUrn, string actor, string text, CancellationToken cancellationToken)
+        ActionContext context, HttpClient client, string postUrn, string actor, string text, CancellationToken cancellationToken)
     {
         try
         {
@@ -190,7 +190,8 @@ public sealed class CreateOrganizationPostAction : ActionBase<CreateOrganization
 
             var body = await response.Content.ReadAsStringAsync(cancellationToken);
             var outcome = ThreadParts.IsAmbiguous(response.StatusCode) ? "may not have been added" : "could not be added";
-            return $"The post was published but the first comment {outcome}: LinkedIn returned {(int)response.StatusCode}: {(body.Length <= 300 ? body : body[..300] + "…")}";
+            NetworkError.Log(context, Network, "first comment", response.StatusCode, body);
+            return $"The post was published but the first comment {outcome}: {NetworkError.Plain(Network, "first comment", response.StatusCode, body)}";
         }
         catch (Exception ex) when (ex is not OperationCanceledException || !cancellationToken.IsCancellationRequested)
         {
@@ -202,7 +203,7 @@ public sealed class CreateOrganizationPostAction : ActionBase<CreateOrganization
     /// Registers an image with LinkedIn, uploads it, and waits until LinkedIn has processed it.
     /// </summary>
     private async Task<(string? ImageUrn, ActionResult? Failure)> UploadImageAsync(
-        HttpClient client, string token, string owner, string imageUrl, CancellationToken cancellationToken)
+        ActionContext context, HttpClient client, string token, string owner, string imageUrl, CancellationToken cancellationToken)
     {
         var (image, imageError) = await _imageFetcher.FetchAsync(imageUrl, MaxImageBytes, cancellationToken);
         if (image is null)
@@ -217,7 +218,7 @@ public sealed class CreateOrganizationPostAction : ActionBase<CreateOrganization
         var initBody = await init.Content.ReadAsStringAsync(cancellationToken);
         if (!init.IsSuccessStatusCode)
         {
-            return (null, PostOutcome.FromPreparationResponse(Network, "image registration", init.StatusCode, initBody));
+            return (null, PostOutcome.FromPreparationResponse(context, Network, "image registration", init.StatusCode, initBody));
         }
 
         string uploadUrl, imageUrn;
@@ -234,7 +235,7 @@ public sealed class CreateOrganizationPostAction : ActionBase<CreateOrganization
             using var uploaded = await client.SendAsync(upload, cancellationToken);
             if (!uploaded.IsSuccessStatusCode)
             {
-                return (null, PostOutcome.FromPreparationResponse(
+                return (null, PostOutcome.FromPreparationResponse(context,
                     Network, "image upload", uploaded.StatusCode, await uploaded.Content.ReadAsStringAsync(cancellationToken)));
             }
         }
@@ -251,7 +252,7 @@ public sealed class CreateOrganizationPostAction : ActionBase<CreateOrganization
             var body = await check.Content.ReadAsStringAsync(cancellationToken);
             if (!check.IsSuccessStatusCode)
             {
-                return (null, PostOutcome.FromPreparationResponse(Network, "image status", check.StatusCode, body));
+                return (null, PostOutcome.FromPreparationResponse(context, Network, "image status", check.StatusCode, body));
             }
 
             using var doc = JsonDocument.Parse(body);

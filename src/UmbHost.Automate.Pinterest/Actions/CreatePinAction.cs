@@ -90,7 +90,7 @@ public sealed partial class CreatePinAction : ActionBase<CreatePinSettings, Crea
             body = await response.Content.ReadAsStringAsync(cancellationToken);
             if (!response.IsSuccessStatusCode)
             {
-                return PostOutcome.FromResponse(Network, response.StatusCode, body, idempotent: false);
+                return PostOutcome.FromResponse(context, Network, response.StatusCode, body, idempotent: false);
             }
         }
         catch (Exception ex)

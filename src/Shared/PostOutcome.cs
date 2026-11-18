@@ -30,12 +30,22 @@ internal static class PostOutcome
         "to avoid a duplicate. Check the account before re-running this step.";
 
     /// <summary>
-    /// Builds the failure for a non-success response from the create-post request.
+    /// Builds the failure for a non-success response from the create-post request. The step's error is the network's own words
+    /// (<see cref="NetworkError.Plain"/>); the whole answer goes to the step's log. With <paramref name="graph"/> (Facebook, Instagram,
+    /// Threads), a Graph error code settles the category where the status alone can't (Graph answers an expired token with 400).
     /// </summary>
-    public static ActionResult FromResponse(string network, HttpStatusCode status, string body, bool idempotent)
+    public static ActionResult FromResponse(ActionContext? context, string network, HttpStatusCode status, string body, bool idempotent, bool graph = false)
     {
         var code = (int)status;
-        var detail = $"{network} returned {code}: {Truncate(body)}";
+        NetworkError.Log(context, network, null, status, body);
+        var detail = NetworkError.Plain(network, null, status, body);
+
+        if (graph && code is >= 400 and < 500 && GraphCategory(body) is { } category)
+        {
+            return ActionResult.Failed(
+                category == StepRunErrorCategory.Authentication ? new UnauthorizedAccessException(detail) : new HttpRequestException(detail),
+                category);
+        }
 
         if (status == HttpStatusCode.Unauthorized)
         {
@@ -74,11 +84,12 @@ internal static class PostOutcome
     /// Builds the failure for a request made before the post itself (sign-in, media upload).
     /// Nothing has been published yet, so transient failures are safe to retry.
     /// </summary>
-    public static ActionResult FromPreparationResponse(string network, string stage, HttpStatusCode status, string body)
+    public static ActionResult FromPreparationResponse(ActionContext? context, string network, string stage, HttpStatusCode status, string body, bool graph = false)
     {
         var code = (int)status;
-        var detail = $"{network} {stage} returned {code}: {Truncate(body)}";
-        var category = status switch
+        NetworkError.Log(context, network, stage, status, body);
+        var detail = NetworkError.Plain(network, stage, status, body);
+        var category = (graph && code is >= 400 and < 500 ? GraphCategory(body) : null) ?? status switch
         {
             HttpStatusCode.Unauthorized or HttpStatusCode.Forbidden => StepRunErrorCategory.Authentication,
             HttpStatusCode.TooManyRequests => StepRunErrorCategory.RateLimiting,
@@ -89,5 +100,17 @@ internal static class PostOutcome
         return ActionResult.Failed(new HttpRequestException(detail), category);
     }
 
-    private static string Truncate(string body) => body.Length <= 500 ? body : body[..500] + "…";
+    /// <summary>
+    /// The category a Graph error code means, or null to go by the status. From
+    /// https://developers.facebook.com/docs/graph-api/guides/error-handling (checked 2026-11-18): 190 "Access token has expired" and 102
+    /// "API Session" (get a new token), 10 "API Permission Denied" and 200-299 permissions (reconnect with the permission) are the
+    /// sign-in; 4 and 17 are throttling. 32 and 613 as throttling are from Meta's rate-limiting guide, as in <c>GraphError</c>.
+    /// </summary>
+    internal static StepRunErrorCategory? GraphCategory(string body)
+        => NetworkError.GraphCode(body) switch
+        {
+            190 or 102 or 10 or (>= 200 and <= 299) => StepRunErrorCategory.Authentication,
+            4 or 17 or 32 or 613 => StepRunErrorCategory.RateLimiting,
+            _ => null,
+        };
 }
