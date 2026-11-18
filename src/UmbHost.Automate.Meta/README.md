@@ -6,7 +6,7 @@ Facebook &amp; Instagram connection and four actions for [Umbraco Automate](http
 - **Create Instagram Post**, to the Instagram professional account linked to the same Page
 - **Get Facebook Post Metrics** and **Get Instagram Post Metrics**, off until Meta approves the app (see [Post metrics](#post-metrics))
 
-Requires Umbraco Automate 17.4+ / 18.4+ and Umbraco CMS 17.6+.
+Requires Umbraco Automate 17.5+ / 18.5+ and Umbraco CMS 17.6+.
 
 ## Setup
 
@@ -23,7 +23,14 @@ Requires Umbraco Automate 17.4+ / 18.4+ and Umbraco CMS 17.6+.
 
 4. **Automate → Connections → Create → Facebook & Instagram.** Enter the Page ID and run **Validate**. It reports the linked Instagram account id; enter that in **Instagram Account ID**.
 
-The **Graph API Version** setting defaults to `v27.0`. Meta supports each version for about two years.
+### Graph API version
+
+Meta [guarantees each Graph API version for at least two years](https://developers.facebook.com/docs/graph-api/guides/versioning) ([release dates](https://developers.facebook.com/docs/graph-api/changelog/versions)). The **Graph API Version** setting:
+
+- **Leave it empty** (the default) to use the connector's current version, `v27.0` in this release. It moves forward when you update the package.
+- **Or enter a version** such as `v27.0` to pin it, in the form `vNN.N`. A pinned version stays as you set it, including connections saved by earlier releases (which stored the default of the day).
+- **Test connection** checks the form, then warns, while still connecting, when the version was released more than about 18 months before the connector's default, or when Meta answered on a newer version than the one asked for (its `facebook-api-version` header). Once a version expires Meta [moves its calls on to the next oldest version it still serves](https://developers.facebook.com/docs/graph-api/guides/versioning) rather than refusing them, so that header is the sign.
+- Where Meta does refuse a deprecated version (error code `2635`, "You are calling a deprecated version of the Ads API", [documented for the Marketing API](https://developers.facebook.com/blog/post/2024/04/16/upcoming-change-in-marketing-api-version-deprecation)), the step fails as a **Validation** error, not retried, saying "Meta no longer supports Graph API version v20.0. Set a newer version in the connection's Graph API Version."
 
 ## Create Facebook Page Post
 

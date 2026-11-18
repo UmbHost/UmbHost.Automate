@@ -1,0 +1,149 @@
+{
+  "items": [
+    {
+      "created_at": "2026-11-18T12:24:11",
+      "link": null,
+      "is_standard": true,
+      "media": {
+        "media_type": "image",
+        "images": {
+          "150x150": {
+            "width": 150,
+            "height": 150,
+            "url": "https://i.pinimg.com/150x150/11/11/11/11111111111111111111111111111111.jpg"
+          },
+          "400x300": {
+            "width": 400,
+            "height": 300,
+            "url": "https://i.pinimg.com/400x300/11/11/11/11111111111111111111111111111111.jpg"
+          },
+          "600x": {
+            "width": 564,
+            "height": 846,
+            "url": "https://i.pinimg.com/564x/11/11/11/11111111111111111111111111111111.jpg"
+          },
+          "1200x": {
+            "width": 1000,
+            "height": 1500,
+            "url": "https://i.pinimg.com/1200x/11/11/11/11111111111111111111111111111111.jpg"
+          }
+        }
+      },
+      "is_owner": true,
+      "title": "",
+      "creative_type": "REGULAR",
+      "pin_metrics": null,
+      "is_removable": false,
+      "alt_text": null,
+      "board_section_id": null,
+      "board_id": "200000000000000001",
+      "description": "UmbSocial test 3 of the Pinterest sandbox set: this Pin should fail (the token was swapped), then be retried.",
+      "has_been_promoted": false,
+      "parent_pin_id": null,
+      "product_tags": [],
+      "is_product": false,
+      "dominant_color": "#293683",
+      "board_owner": {
+        "username": "example"
+      },
+      "id": "300000000000000003"
+    },
+    {
+      "created_at": "2026-11-18T12:20:52",
+      "link": null,
+      "is_standard": true,
+      "media": {
+        "media_type": "image",
+        "images": {
+          "150x150": {
+            "width": 150,
+            "height": 150,
+            "url": "https://i.pinimg.com/150x150/00/00/00/00000000000000000000000000000000.jpg"
+          },
+          "400x300": {
+            "width": 400,
+            "height": 300,
+            "url": "https://i.pinimg.com/400x300/00/00/00/00000000000000000000000000000000.jpg"
+          },
+          "600x": {
+            "width": 564,
+            "height": 846,
+            "url": "https://i.pinimg.com/564x/00/00/00/00000000000000000000000000000000.jpg"
+          },
+          "1200x": {
+            "width": 1000,
+            "height": 1500,
+            "url": "https://i.pinimg.com/1200x/00/00/00/00000000000000000000000000000000.jpg"
+          }
+        }
+      },
+      "is_owner": true,
+      "title": "",
+      "creative_type": "REGULAR",
+      "pin_metrics": null,
+      "is_removable": false,
+      "alt_text": null,
+      "board_section_id": null,
+      "board_id": "200000000000000001",
+      "description": "UmbSocial test 2 of the Pinterest sandbox set: a scheduled Pin.",
+      "has_been_promoted": false,
+      "parent_pin_id": null,
+      "product_tags": [],
+      "is_product": false,
+      "dominant_color": "#2b3a8e",
+      "board_owner": {
+        "username": "example"
+      },
+      "id": "300000000000000002"
+    },
+    {
+      "created_at": "2026-11-18T12:09:07",
+      "link": "https://docs.umb.social/17/getting-started/overview/",
+      "is_standard": true,
+      "media": {
+        "media_type": "image",
+        "images": {
+          "150x150": {
+            "width": 150,
+            "height": 150,
+            "url": "https://i.pinimg.com/150x150/11/11/11/11111111111111111111111111111111.jpg"
+          },
+          "400x300": {
+            "width": 400,
+            "height": 300,
+            "url": "https://i.pinimg.com/400x300/11/11/11/11111111111111111111111111111111.jpg"
+          },
+          "600x": {
+            "width": 564,
+            "height": 846,
+            "url": "https://i.pinimg.com/564x/11/11/11/11111111111111111111111111111111.jpg"
+          },
+          "1200x": {
+            "width": 1000,
+            "height": 1500,
+            "url": "https://i.pinimg.com/1200x/11/11/11/11111111111111111111111111111111.jpg"
+          }
+        }
+      },
+      "is_owner": true,
+      "title": "UmbSocial sandbox test Pin",
+      "creative_type": "REGULAR",
+      "pin_metrics": null,
+      "is_removable": false,
+      "alt_text": "Spring launch banner: navy background with a pink circle and the words Spring launch.",
+      "board_section_id": null,
+      "board_id": "200000000000000001",
+      "description": "UmbSocial test 1 of the Pinterest sandbox set: an image Pin with a title, description, link and alt text. https://docs.umb.social/17/getting-started/overview/",
+      "has_been_promoted": false,
+      "parent_pin_id": null,
+      "product_tags": [],
+      "is_product": false,
+      "dominant_color": "#293683",
+      "board_owner": {
+        "username": "example"
+      },
+      "id": "300000000000000001"
+    }
+  ],
+  "bookmark": null
+}

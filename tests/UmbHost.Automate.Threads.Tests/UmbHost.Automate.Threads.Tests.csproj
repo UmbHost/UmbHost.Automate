@@ -29,4 +29,9 @@
     <ProjectReference Include="..\..\src\UmbHost.Automate.Threads\UmbHost.Automate.Threads.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <!-- Replies captured from the live network (see Fixtures/Live/README.md), read by LiveFixture. -->
+    <None Update="Fixtures\**\*" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
 </Project>

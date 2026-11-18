@@ -37,7 +37,10 @@ public class GetPostMetricsActionTests
 
     private static string PinUrl(string id) => $"{Pins}{id}?pin_metrics=true";
 
-    /// <summary>A Pin with <c>pin_metrics</c> as the spec's example shows it (<c>Pin.pin_metrics</c>), plus <c>save</c> when asked.</summary>
+    /// <summary>
+    /// A Pin with <c>pin_metrics</c> as the spec's example shows it (<c>Pin.pin_metrics</c>), plus <c>save</c> when asked. Docs-based: the live
+    /// sandbox shape (<c>outbound_click</c>, nulls) is in <see cref="LiveSandboxTests"/>.
+    /// </summary>
     private static JsonObject Pin(string id, bool withSave = false, bool lifetime = true)
     {
         var lifetimeMetrics = new JsonObject

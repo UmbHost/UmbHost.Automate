@@ -9,7 +9,7 @@
     <Version>1.0.0</Version>
     <Authors>UmbHost</Authors>
     <Company>UmbHost</Company>
-    <Description>Pinterest connection type (OAuth) and a Create Pin action (board, title, description, link, alt text) for Umbraco Automate.</Description>
+    <Description>Pinterest connection type (OAuth or access token, production or sandbox) and a Create Pin action (board, title, description, link, alt text) for Umbraco Automate.</Description>
     <PackageTags>umbraco;automate;social;pinterest;umbraco-marketplace</PackageTags>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
     <PackageProjectUrl>https://github.com/UmbHost/UmbHost.Automate</PackageProjectUrl>

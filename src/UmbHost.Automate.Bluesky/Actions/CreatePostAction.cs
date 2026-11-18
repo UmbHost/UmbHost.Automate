@@ -133,6 +133,13 @@ public sealed class CreatePostAction : ActionBase<CreatePostSettings, CreatePost
                 StepRunErrorCategory.Validation);
         }
 
+        return ThreadParts.FirstPartFailed(await PublishAsync(context, settings, threadParts, cancellationToken), threadParts.Count + 1);
+    }
+
+    /// <summary>Signs in, prepares and posts the thread. Once the first post is live, a failure is only ever <see cref="ThreadParts.PartFailed"/>.</summary>
+    private async Task<ActionResult> PublishAsync(
+        ActionContext context, CreatePostSettings settings, IReadOnlyList<string> threadParts, CancellationToken cancellationToken)
+    {
         var conn = context.Connection?.GetSettings<BlueskyConnectionSettings>();
         if (conn is null || string.IsNullOrWhiteSpace(conn.Identifier) || string.IsNullOrWhiteSpace(conn.AppPassword))
         {
@@ -141,10 +148,10 @@ public sealed class CreatePostAction : ActionBase<CreatePostSettings, CreatePost
 
         using var client = BlueskyClient.Create(_httpClientFactory, conn);
 
-        var (session, sessionStatus, sessionBody) = await BlueskyClient.CreateSessionAsync(client, conn, cancellationToken);
+        var (session, sessionStatus, sessionBody, sessionHeaders) = await BlueskyClient.CreateSessionAsync(client, conn, cancellationToken);
         if (session is null)
         {
-            return PostOutcome.FromPreparationResponse(Network, "sign-in", sessionStatus, sessionBody);
+            return PostOutcome.FromPreparationResponse(context, Network, "sign-in", sessionStatus, sessionBody, headers: sessionHeaders);
         }
 
         var record = BuildRecord(settings.Text, settings.Language);
@@ -163,7 +170,7 @@ public sealed class CreatePostAction : ActionBase<CreatePostSettings, CreatePost
             var uploadBody = await uploadResponse.Content.ReadAsStringAsync(cancellationToken);
             if (!uploadResponse.IsSuccessStatusCode)
             {
-                return PostOutcome.FromPreparationResponse(Network, "image upload", uploadResponse.StatusCode, uploadBody);
+                return PostOutcome.FromPreparationResponse(context, Network, "image upload", uploadResponse.StatusCode, uploadBody, headers: uploadResponse.Headers);
             }
 
             var blob = JsonNode.Parse(uploadBody)!["blob"]!.DeepClone();
@@ -203,7 +210,7 @@ public sealed class CreatePostAction : ActionBase<CreatePostSettings, CreatePost
             record["embed"] = new JsonObject { ["$type"] = "app.bsky.embed.external", ["external"] = external };
         }
 
-        var (first, firstFailure, _, _) = await CreateRecordAsync(client, session, record, cancellationToken);
+        var (first, firstFailure, _, _) = await CreateRecordAsync(context, client, session, record, cancellationToken);
         if (first is null)
         {
             return firstFailure!;
@@ -226,7 +233,7 @@ public sealed class CreatePostAction : ActionBase<CreatePostSettings, CreatePost
             bool unknown;
             try
             {
-                (posted, _, detail, unknown) = await CreateRecordAsync(client, session, part, cancellationToken);
+                (posted, _, detail, unknown) = await CreateRecordAsync(context, client, session, part, cancellationToken);
             }
             catch (Exception ex)
             {
@@ -281,7 +288,7 @@ public sealed class CreatePostAction : ActionBase<CreatePostSettings, CreatePost
 
     /// <summary>Creates one post record. On failure returns the step failure (first post) and a plain detail (later parts).</summary>
     private static async Task<(Created? Created, ActionResult? Failure, string? Detail, bool Unknown)> CreateRecordAsync(
-        HttpClient client, BlueskySession session, JsonObject record, CancellationToken cancellationToken)
+        ActionContext context, HttpClient client, BlueskySession session, JsonObject record, CancellationToken cancellationToken)
     {
         string body;
         try
@@ -293,7 +300,7 @@ public sealed class CreatePostAction : ActionBase<CreatePostSettings, CreatePost
             body = await response.Content.ReadAsStringAsync(cancellationToken);
             if (!response.IsSuccessStatusCode)
             {
-                return (null, PostOutcome.FromResponse(Network, response.StatusCode, body, idempotent: false), $"{Network} returned {(int)response.StatusCode}: {body}", ThreadParts.IsAmbiguous(response.StatusCode));
+                return (null, PostOutcome.FromResponse(context, Network, response.StatusCode, body, idempotent: false, headers: response.Headers), NetworkError.Plain(Network, null, response.StatusCode, body), ThreadParts.IsAmbiguous(response.StatusCode));
             }
 
             // Read inside the try: Bluesky accepted the post, so an answer that can't be read leaves it live, never retried.

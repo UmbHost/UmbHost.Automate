@@ -92,7 +92,7 @@ public sealed partial class CreateUpdateAction : ActionBase<CreateUpdateSettings
         using var client = _httpClientFactory.CreateClient();
         client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
 
-        var verified = await VerifiedAsync(client, location.Groups[1].Value, cancellationToken);
+        var verified = await VerifiedAsync(context, client, location.Groups[1].Value, cancellationToken);
         if (verified is not null)
         {
             return verified;
@@ -120,7 +120,7 @@ public sealed partial class CreateUpdateAction : ActionBase<CreateUpdateSettings
             body = await response.Content.ReadAsStringAsync(cancellationToken);
             if (!response.IsSuccessStatusCode)
             {
-                return PostOutcome.FromResponse(Network, response.StatusCode, body, idempotent: false);
+                return PostOutcome.FromResponse(context, Network, response.StatusCode, body, idempotent: false, headers: response.Headers);
             }
         }
         catch (Exception ex)
@@ -137,13 +137,13 @@ public sealed partial class CreateUpdateAction : ActionBase<CreateUpdateSettings
     }
 
     /// <summary>Null when the location has Voice of Merchant (it can post); otherwise the failure.</summary>
-    private static async Task<ActionResult?> VerifiedAsync(HttpClient client, string location, CancellationToken cancellationToken)
+    private static async Task<ActionResult?> VerifiedAsync(ActionContext context, HttpClient client, string location, CancellationToken cancellationToken)
     {
         using var response = await client.GetAsync($"https://mybusinessverifications.googleapis.com/v1/{location}/VoiceOfMerchantState", cancellationToken);
         var body = await response.Content.ReadAsStringAsync(cancellationToken);
         if (!response.IsSuccessStatusCode)
         {
-            return PostOutcome.FromPreparationResponse(Network, "verification check", response.StatusCode, body);
+            return PostOutcome.FromPreparationResponse(context, Network, "verification check", response.StatusCode, body, headers: response.Headers);
         }
 
         using var doc = JsonDocument.Parse(body);

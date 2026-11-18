@@ -173,9 +173,9 @@ public class CreatePinActionTests
     public async Task Testing_the_connection_lists_the_boards_by_name_and_id()
     {
         var handler = new Mock<HttpMessageHandler>();
-        handler.SetupRequest(HttpMethod.Get, Api + "boards?page_size=100")
+        handler.SetupRequest(HttpMethod.Get, Api + "boards?page_size=250")
             .ReturnsResponse(HttpStatusCode.OK, """{"items":[{"id":"549755885175","name":"Recipes"}],"bookmark":"b2"}""");
-        handler.SetupRequest(HttpMethod.Get, Api + "boards?page_size=100&bookmark=b2")
+        handler.SetupRequest(HttpMethod.Get, Api + "boards?page_size=250&bookmark=b2")
             .ReturnsResponse(HttpStatusCode.OK, """{"items":[{"id":"549755885176","name":"Shop"}],"bookmark":null}""");
 
         var result = await Connection(handler).ValidateAsync(Conn, default);
@@ -188,11 +188,11 @@ public class CreatePinActionTests
     public async Task A_connection_with_no_boards_warns()
     {
         var handler = new Mock<HttpMessageHandler>();
-        handler.SetupRequest(HttpMethod.Get, Api + "boards?page_size=100").ReturnsResponse(HttpStatusCode.OK, """{"items":[],"bookmark":null}""");
+        handler.SetupRequest(HttpMethod.Get, Api + "boards?page_size=250").ReturnsResponse(HttpStatusCode.OK, """{"items":[],"bookmark":null}""");
 
         var result = await Connection(handler).ValidateAsync(Conn, default);
 
         result.Status.Should().Be(ConnectionValidationStatus.Warning);
-        result.Message.Should().Be("No boards found: create one in Pinterest first.");
+        result.Message.Should().Be("Production, OAuth: no boards found. Create one in Pinterest first.");
     }
 }

@@ -215,4 +215,22 @@ public class PostCardActionTests
         plain.Exception!.Message.Should().Contain("Forbidden.Flow").And.Contain("403").And.Contain(Host);
         odd.Exception!.Message.Should().NotContain("SECRETSIG").And.NotContain("/workflows/");
     }
+
+    [Fact]
+    public async Task a_throttled_workflow_says_when_to_try_again()
+    {
+        // Power Automate answers a throttled trigger with 429 and Retry-After; the reset time reaches UmbSocial, the body is still not read.
+        var handler = new RecordingHandler(_ =>
+        {
+            var response = new HttpResponseMessage(HttpStatusCode.TooManyRequests) { Content = new StringContent("{\"error\":{\"message\":\"sig=SECRETSIG\"}}") };
+            response.Headers.TryAddWithoutValidation("Retry-After", "Fri, 01 Jan 2100 00:05:00 GMT");
+            return response;
+        });
+
+        var result = await Run(handler, new PostCardSettings { Text = "Hi" });
+
+        result.ErrorCategory.Should().Be(StepRunErrorCategory.RateLimiting);
+        result.Exception!.Message.Split('\n').Should().Equal(
+            "Microsoft Teams returned 429.", """UMBSOCIAL-RETRY-AT {"retryAtUtc":"2100-01-01T00:05:00Z"}""");
+    }
 }

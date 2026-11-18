@@ -2,7 +2,9 @@
 
 Mastodon connection and **Create Mastodon Status** and **Get Mastodon Post Metrics** actions for [Umbraco Automate](https://github.com/umbraco/Umbraco.Automate). Works with any Mastodon instance.
 
-Requires Umbraco Automate 17.4+ / 18.4+ and Umbraco CMS 17.6+.
+Requires Umbraco Automate 17.5+ / 18.5+ and Umbraco CMS 17.6+.
+
+**Checked live** on 2026-11-18 against umbracocommunity.social (Mastodon 4.7.5): a text status, an image with alt text, a link (with its preview card), an unlisted status, a two-part thread behind a content warning, a scheduled status, a swapped token refused with 401 (shown as "The access token is invalid") and then retried, and the metrics read (all four counts, `quotes_count` included). The tests use those replies (`tests/UmbHost.Automate.Mastodon.Tests/Fixtures/Live`).
 
 ## Setup
 

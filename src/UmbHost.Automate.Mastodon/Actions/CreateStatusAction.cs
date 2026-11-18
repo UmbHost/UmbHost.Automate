@@ -29,7 +29,7 @@ public sealed class CreateStatusAction : ActionBase<CreateStatusSettings, Create
     private const string Network = "Mastodon";
 
     // Mastodon's default image_size_limit; instances may set it lower, which the upload reports.
-    private const long MaxImageBytes = 16 * 1024 * 1024;
+    internal const long MaxImageBytes = 16 * 1024 * 1024;
     private const int MaxMediaPolls = 10;
 
     private static readonly string[] Visibilities = ["public", "unlisted", "private", "direct"];
@@ -76,6 +76,13 @@ public sealed class CreateStatusAction : ActionBase<CreateStatusSettings, Create
             return ActionResult.Failed(new ArgumentException(threadError), StepRunErrorCategory.Validation);
         }
 
+        return ThreadParts.FirstPartFailed(await PublishAsync(context, settings, visibility, threadParts, cancellationToken), threadParts.Count + 1);
+    }
+
+    /// <summary>Prepares and posts the thread. Once the first post is live, a failure is only ever <see cref="ThreadParts.PartFailed"/>.</summary>
+    private async Task<ActionResult> PublishAsync(
+        ActionContext context, CreateStatusSettings settings, string visibility, IReadOnlyList<string> threadParts, CancellationToken cancellationToken)
+    {
         var conn = context.Connection?.GetSettings<MastodonConnectionSettings>();
         if (conn is null || string.IsNullOrWhiteSpace(conn.InstanceUrl) || string.IsNullOrWhiteSpace(conn.AccessToken))
         {
@@ -97,7 +104,7 @@ public sealed class CreateStatusAction : ActionBase<CreateStatusSettings, Create
 
         if (!string.IsNullOrWhiteSpace(settings.ImageUrl))
         {
-            var (mediaId, failure) = await UploadImageAsync(client, settings, cancellationToken);
+            var (mediaId, failure) = await UploadImageAsync(context, client, settings, cancellationToken);
             if (failure is not null)
             {
                 return failure;
@@ -106,7 +113,7 @@ public sealed class CreateStatusAction : ActionBase<CreateStatusSettings, Create
             status["media_ids"] = new[] { mediaId! };
         }
 
-        var (first, firstFailure, _, _) = await SendAsync(client, status, $"{context.RunId}:{context.StepId}", cancellationToken);
+        var (first, firstFailure, _, _) = await SendAsync(context, client, status, $"{context.RunId}:{context.StepId}", cancellationToken);
         if (first is null)
         {
             return firstFailure!;
@@ -138,7 +145,7 @@ public sealed class CreateStatusAction : ActionBase<CreateStatusSettings, Create
             bool unknown;
             try
             {
-                (posted, _, detail, unknown) = await SendAsync(client, part, $"{context.RunId}:{context.StepId}:{i + 1}", cancellationToken);
+                (posted, _, detail, unknown) = await SendAsync(context, client, part, $"{context.RunId}:{context.StepId}:{i + 1}", cancellationToken);
             }
             catch (Exception ex)
             {
@@ -162,7 +169,7 @@ public sealed class CreateStatusAction : ActionBase<CreateStatusSettings, Create
 
     /// <summary>Posts one status. On failure returns the step failure (for the first status) and a plain detail (for a later part).</summary>
     private static async Task<(Posted? Posted, ActionResult? Failure, string? Detail, bool Unknown)> SendAsync(
-        HttpClient client, Dictionary<string, object> status, string idempotencyKey, CancellationToken cancellationToken)
+        ActionContext context, HttpClient client, Dictionary<string, object> status, string idempotencyKey, CancellationToken cancellationToken)
     {
         string body;
         try
@@ -176,7 +183,7 @@ public sealed class CreateStatusAction : ActionBase<CreateStatusSettings, Create
             body = await response.Content.ReadAsStringAsync(cancellationToken);
             if (!response.IsSuccessStatusCode)
             {
-                return (null, PostOutcome.FromResponse(Network, response.StatusCode, body, idempotent: true), $"{Network} returned {(int)response.StatusCode}: {body}", ThreadParts.IsAmbiguous(response.StatusCode));
+                return (null, PostOutcome.FromResponse(context, Network, response.StatusCode, body, idempotent: true, headers: response.Headers), NetworkError.Plain(Network, null, response.StatusCode, body), ThreadParts.IsAmbiguous(response.StatusCode));
             }
 
             // Read inside the try: Mastodon accepted the status, so an answer that can't be read leaves it live. A retry of the first
@@ -193,7 +200,7 @@ public sealed class CreateStatusAction : ActionBase<CreateStatusSettings, Create
     }
 
     private async Task<(string? MediaId, ActionResult? Failure)> UploadImageAsync(
-        HttpClient client, CreateStatusSettings settings, CancellationToken cancellationToken)
+        ActionContext context, HttpClient client, CreateStatusSettings settings, CancellationToken cancellationToken)
     {
         var (image, imageError) = await _imageFetcher.FetchAsync(settings.ImageUrl!, MaxImageBytes, cancellationToken);
         if (image is null)
@@ -214,7 +221,7 @@ public sealed class CreateStatusAction : ActionBase<CreateStatusSettings, Create
         var uploadBody = await upload.Content.ReadAsStringAsync(cancellationToken);
         if (!upload.IsSuccessStatusCode)
         {
-            return (null, PostOutcome.FromPreparationResponse(Network, "image upload", upload.StatusCode, uploadBody));
+            return (null, PostOutcome.FromPreparationResponse(context, Network, "image upload", upload.StatusCode, uploadBody, headers: upload.Headers));
         }
 
         string mediaId;
@@ -244,8 +251,8 @@ public sealed class CreateStatusAction : ActionBase<CreateStatusSettings, Create
 
                 if (check.StatusCode != HttpStatusCode.PartialContent)
                 {
-                    return (null, PostOutcome.FromPreparationResponse(
-                        Network, "image processing", check.StatusCode, await check.Content.ReadAsStringAsync(cancellationToken)));
+                    return (null, PostOutcome.FromPreparationResponse(context,
+                        Network, "image processing", check.StatusCode, await check.Content.ReadAsStringAsync(cancellationToken), headers: check.Headers));
                 }
             }
         }

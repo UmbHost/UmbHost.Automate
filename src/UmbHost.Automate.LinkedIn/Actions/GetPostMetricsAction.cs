@@ -17,7 +17,8 @@ namespace UmbHost.Automate.LinkedIn.Actions;
 /// <para>
 /// Off until LinkedIn approves the app: <c>Umbraco:Automate:Providers:LinkedIn:Insights</c> (default false; on only for "true", in any
 /// case). While it's off nothing goes to LinkedIn, not even a token fetch, and every id is <c>needsPermission</c> with
-/// <c>insights_off</c>. Turning it on also adds the <c>rw_organization_admin</c> scope, so existing connections must be re-authorised.
+/// <c>insights_off</c>. The connection always asks for <c>rw_organization_admin</c> (<c>LinkedInOAuthComposer</c>), so turning it
+/// on needs no re-authorisation.
 /// </para>
 /// <para>
 /// <c>GET /rest/organizationalEntityShareStatistics?q=organizationalEntity&amp;organizationalEntity={org}</c> with
@@ -136,7 +137,7 @@ public sealed partial class GetPostMetricsAction : ActionBase<GetPostMetricsSett
                          .Concat(ugcPosts.Chunk(MaxUrnsPerCall).Select(c => (c, string.Join("&", c.Select((urn, i) => $"ugcPosts[{i}]={Uri.EscapeDataString(urn)}"))))))
             {
                 var failure = await ReadAsync(
-                    client, $"organizationalEntityShareStatistics?q=organizationalEntity&organizationalEntity={organization}&{posts}",
+                    context, client, $"organizationalEntityShareStatistics?q=organizationalEntity&organizationalEntity={organization}&{posts}",
                     chunk, settled, cancellationToken);
                 if (failure is not null)
                 {
@@ -151,13 +152,20 @@ public sealed partial class GetPostMetricsAction : ActionBase<GetPostMetricsSett
 
     /// <summary>Reads one call's posts into <paramref name="settled"/>; returns a step failure, or null.</summary>
     private static async Task<ActionResult?> ReadAsync(
-        HttpClient client, string path, IReadOnlyCollection<string> chunk, Dictionary<string, PostMetricsResult> settled, CancellationToken cancellationToken)
+        ActionContext context, HttpClient client, string path, IReadOnlyCollection<string> chunk, Dictionary<string, PostMetricsResult> settled, CancellationToken cancellationToken)
     {
         string body;
         try
         {
             using var response = await client.GetAsync(path, cancellationToken);
             body = await response.Content.ReadAsStringAsync(cancellationToken);
+
+            // A retired version is the whole step's (the admin must move it on), not each post's.
+            if (LinkedInApiVersion.Refused(context, "metrics", LinkedInClient.VersionOf(client), response.StatusCode, body) is { } refused)
+            {
+                return refused;
+            }
+
             if (response.StatusCode == HttpStatusCode.Forbidden)
             {
                 foreach (var urn in chunk)
@@ -181,7 +189,7 @@ public sealed partial class GetPostMetricsAction : ActionBase<GetPostMetricsSett
 
             if (!response.IsSuccessStatusCode)
             {
-                return ReadOutcome.FromResponse(Network, response.StatusCode, body);
+                return ReadOutcome.FromResponse(context, Network, response.StatusCode, body);
             }
         }
         catch (Exception ex) when (ReadOutcome.IsTransport(ex))

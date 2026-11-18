@@ -81,12 +81,12 @@ internal static class GraphError
     }
 
     /// <summary>The step failure for an <see cref="Kind.Authentication"/>, <see cref="Kind.RateLimited"/> or <see cref="Kind.Other"/> answer.</summary>
-    public static ActionResult Fail(string network, Kind kind, HttpStatusCode status, string body)
+    public static ActionResult Fail(ActionContext? context, string network, Kind kind, HttpStatusCode status, string body)
         => kind switch
         {
-            Kind.Authentication => ReadOutcome.FromResponse(network, HttpStatusCode.Unauthorized, body),
-            Kind.RateLimited => ReadOutcome.FromResponse(network, HttpStatusCode.TooManyRequests, body),
-            _ => ReadOutcome.FromResponse(network, status, body),
+            Kind.Authentication => ReadOutcome.FromResponse(context, network, HttpStatusCode.Unauthorized, body),
+            Kind.RateLimited => ReadOutcome.FromResponse(context, network, HttpStatusCode.TooManyRequests, body),
+            _ => ReadOutcome.FromResponse(context, network, status, body),
         };
 
     private static int? Int(JsonElement error, string name)

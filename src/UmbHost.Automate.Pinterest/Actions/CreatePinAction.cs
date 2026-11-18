@@ -1,3 +1,4 @@
+using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Text.Json;
@@ -57,17 +58,15 @@ public sealed partial class CreatePinAction : ActionBase<CreatePinSettings, Crea
         }
 
         var conn = context.Connection?.GetSettings<PinterestConnectionSettings>();
-        if (conn?.OAuthCredentialsId is not { } credentialsId)
+        if (conn is null)
         {
             return ActionResult.Failed(new InvalidOperationException("A Pinterest connection is required."), StepRunErrorCategory.Authentication);
         }
 
-        var token = await _credentialsService.GetValidAccessTokenAsync(credentialsId, cancellationToken);
-        if (string.IsNullOrEmpty(token))
+        var (token, error) = await PinterestApi.GetTokenAsync(conn, _credentialsService, cancellationToken);
+        if (token is null)
         {
-            return ActionResult.Failed(
-                new UnauthorizedAccessException("The Pinterest token is expired or revoked. Re-authorise the connection."),
-                StepRunErrorCategory.Authentication);
+            return PinterestApi.NoToken(error!);
         }
 
         var pin = new JsonObject
@@ -86,11 +85,16 @@ public sealed partial class CreatePinAction : ActionBase<CreatePinSettings, Crea
         string body;
         try
         {
-            using var response = await client.PostAsJsonAsync("https://api.pinterest.com/v5/pins", pin, cancellationToken);
+            using var response = await client.PostAsJsonAsync(PinterestApi.BaseUrl(conn) + "pins", pin, cancellationToken);
             body = await response.Content.ReadAsStringAsync(cancellationToken);
+            if (response.StatusCode == HttpStatusCode.Unauthorized && conn.SignIn == PinterestSignIn.AccessToken)
+            {
+                return PinterestApi.AccessTokenRejected(conn);
+            }
+
             if (!response.IsSuccessStatusCode)
             {
-                return PostOutcome.FromResponse(Network, response.StatusCode, body, idempotent: false);
+                return PostOutcome.FromResponse(context, Network, response.StatusCode, body, idempotent: false, headers: response.Headers);
             }
         }
         catch (Exception ex)

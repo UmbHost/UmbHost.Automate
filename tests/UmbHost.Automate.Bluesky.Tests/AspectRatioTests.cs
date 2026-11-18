@@ -117,14 +117,16 @@ public class AspectRatioTests
     {
         var handler = new Mock<HttpMessageHandler>();
         handler.SetupRequest(HttpMethod.Post, Pds + "com.atproto.server.createSession")
-               .ReturnsResponse(HttpStatusCode.Unauthorized, new StringContent("""{"error":"AuthenticationRequired","message":"Invalid identifier or password"}"""));
+               .ReturnsResponse(HttpStatusCode.Unauthorized, new StringContent(LiveFixture.Text("error-401-sign-in")));
 
         var sut = new CreatePostAction(ActionTestHarness.Infrastructure, handler.CreateClientFactory(), SocialTestHarness.Options());
-        var result = await sut.ExecuteAsync(ActionTestHarness.Context(new CreatePostSettings { Text = "Hello" }, Conn), default);
+        var context = ActionTestHarness.Context(new CreatePostSettings { Text = "Hello" }, Conn);
+        var result = await sut.ExecuteAsync(context, default);
 
         result.Status.Should().Be(ActionResultStatus.Failed);
         result.ErrorCategory.Should().Be(StepRunErrorCategory.Authentication);
-        result.Exception!.Message.Should().Contain("sign-in returned 401");
+        result.Exception!.Message.Should().Be("Invalid identifier or password");
+        context.LogEntries.Should().ContainSingle(e => e.Message.StartsWith("Bluesky sign-in returned 401: "));
         handler.VerifyRequest(HttpMethod.Post, Pds + "com.atproto.repo.createRecord", Times.Never());
     }
 }

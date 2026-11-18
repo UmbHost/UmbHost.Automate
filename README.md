@@ -8,7 +8,7 @@ Community provider packages for [Umbraco Automate](https://github.com/umbraco/Um
 | [`UmbHost.Automate.GitHub`](src/UmbHost.Automate.GitHub) | GitHub OAuth connection + Rename Title / Add Comment / Set State actions, a `jsonpath` binding filter, and an `X-Hub-Signature-256` webhook authenticator |
 | [`UmbHost.Automate.Bluesky`](src/UmbHost.Automate.Bluesky) | Bluesky app-password connection + Create Post (clickable links, image) + Get Post Metrics (public counts) |
 | [`UmbHost.Automate.Mastodon`](src/UmbHost.Automate.Mastodon) | Mastodon token connection + Create Status (image, idempotent retries) + Get Post Metrics (public counts) |
-| [`UmbHost.Automate.LinkedIn`](src/UmbHost.Automate.LinkedIn) | LinkedIn OAuth connection + Create Company Post (link card or image) |
+| [`UmbHost.Automate.LinkedIn`](src/UmbHost.Automate.LinkedIn) | LinkedIn OAuth connections: Create Company Post (company page) and Create Profile Post (your own profile), link card or image |
 | [`UmbHost.Automate.X`](src/UmbHost.Automate.X) | X (Twitter) OAuth 2.0 connection + Create Post (image, alt text) |
 | [`UmbHost.Automate.Meta`](src/UmbHost.Automate.Meta) | Facebook Page token connection + Create Facebook Page Post / Create Instagram Post |
 | [`UmbHost.Automate.Threads`](src/UmbHost.Automate.Threads) | Threads OAuth connection (60-day tokens, renewed in use) + Create Threads Post (image, alt text, threads) |
@@ -36,8 +36,8 @@ For the social post actions a retry is a duplicate public post, so they share on
 (4xx) fails without retry, a 429 retries, and a create-post request with no clear answer (5xx,
 timeout) fails **without** retrying and says the post may exist. Mastodon is the exception: it
 honours an idempotency key, so it retries safely. Images are downloaded through Automate's
-SSRF-protected HTTP client (`src/Shared/ImageFetcher.cs`), which is why the social packages need
-Automate 17.4+ / 18.4+.
+SSRF-protected HTTP client (`src/Shared/ImageFetcher.cs`, Automate 17.4+), and a failed request's whole answer goes to the
+step's own log (`src/Shared/NetworkError.cs`, Automate 17.5+), which is why the social packages need Automate 17.5+ / 18.5+.
 
 ## Build & test
 

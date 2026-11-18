@@ -71,7 +71,8 @@ public sealed class CreateInstagramPostAction : ActionBase<CreateInstagramPostSe
         var containerBody = await containerResponse.Content.ReadAsStringAsync(cancellationToken);
         if (!containerResponse.IsSuccessStatusCode)
         {
-            return PostOutcome.FromPreparationResponse(Network, "media container", containerResponse.StatusCode, containerBody);
+            return MetaGraphVersion.Refused(context, Network, "media container", MetaGraphVersion.VersionOf(client), containerResponse.StatusCode, containerBody)
+                   ?? PostOutcome.FromPreparationResponse(context, Network, "media container", containerResponse.StatusCode, containerBody, graph: true, headers: containerResponse.Headers);
         }
 
         string containerId;
@@ -80,7 +81,7 @@ public sealed class CreateInstagramPostAction : ActionBase<CreateInstagramPostSe
             containerId = doc.RootElement.GetProperty("id").GetString()!;
         }
 
-        var ready = await WaitForContainerAsync(client, containerId, cancellationToken);
+        var ready = await WaitForContainerAsync(context, client, containerId, cancellationToken);
         if (ready is not null)
         {
             return ready;
@@ -94,7 +95,8 @@ public sealed class CreateInstagramPostAction : ActionBase<CreateInstagramPostSe
             body = await response.Content.ReadAsStringAsync(cancellationToken);
             if (!response.IsSuccessStatusCode)
             {
-                return PostOutcome.FromResponse(Network, response.StatusCode, body, idempotent: false);
+                return MetaGraphVersion.Refused(context, Network, null, MetaGraphVersion.VersionOf(client), response.StatusCode, body)
+                       ?? PostOutcome.FromResponse(context, Network, response.StatusCode, body, idempotent: false, graph: true, headers: response.Headers);
             }
         }
         catch (Exception ex)
@@ -118,7 +120,7 @@ public sealed class CreateInstagramPostAction : ActionBase<CreateInstagramPostSe
     /// <summary>
     /// Polls the container until it is FINISHED. Returns null when ready, otherwise the failure.
     /// </summary>
-    private async Task<ActionResult?> WaitForContainerAsync(HttpClient client, string containerId, CancellationToken cancellationToken)
+    private async Task<ActionResult?> WaitForContainerAsync(ActionContext context, HttpClient client, string containerId, CancellationToken cancellationToken)
     {
         for (var attempt = 0; attempt < MaxContainerPolls; attempt++)
         {
@@ -131,7 +133,8 @@ public sealed class CreateInstagramPostAction : ActionBase<CreateInstagramPostSe
             var body = await response.Content.ReadAsStringAsync(cancellationToken);
             if (!response.IsSuccessStatusCode)
             {
-                return PostOutcome.FromPreparationResponse(Network, "media container status", response.StatusCode, body);
+                return MetaGraphVersion.Refused(context, Network, "media container status", MetaGraphVersion.VersionOf(client), response.StatusCode, body)
+                       ?? PostOutcome.FromPreparationResponse(context, Network, "media container status", response.StatusCode, body, graph: true, headers: response.Headers);
             }
 
             using var doc = JsonDocument.Parse(body);

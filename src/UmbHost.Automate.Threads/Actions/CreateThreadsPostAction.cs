@@ -69,6 +69,13 @@ public sealed class CreateThreadsPostAction : ActionBase<CreateThreadsPostSettin
             return ActionResult.Failed(new ArgumentException(threadError), StepRunErrorCategory.Validation);
         }
 
+        return ThreadParts.FirstPartFailed(await PublishAsync(context, settings, threadParts, cancellationToken), threadParts.Count + 1);
+    }
+
+    /// <summary>Signs in, prepares and posts the thread. Once the first post is live, a failure is only ever <see cref="ThreadParts.PartFailed"/>.</summary>
+    private async Task<ActionResult> PublishAsync(
+        ActionContext context, CreateThreadsPostSettings settings, IReadOnlyList<string> threadParts, CancellationToken cancellationToken)
+    {
         var conn = context.Connection?.GetSettings<ThreadsConnectionSettings>();
         if (conn?.OAuthCredentialsId is not { } credentialsId)
         {
@@ -92,7 +99,7 @@ public sealed class CreateThreadsPostAction : ActionBase<CreateThreadsPostSettin
             var meBody = await me.Content.ReadAsStringAsync(cancellationToken);
             if (!me.IsSuccessStatusCode)
             {
-                return PostOutcome.FromPreparationResponse(Network, "account lookup", me.StatusCode, meBody);
+                return PostOutcome.FromPreparationResponse(context, Network, "account lookup", me.StatusCode, meBody, graph: true, headers: me.Headers);
             }
 
             using var doc = JsonDocument.Parse(meBody);
@@ -130,7 +137,7 @@ public sealed class CreateThreadsPostAction : ActionBase<CreateThreadsPostSettin
             Part step;
             try
             {
-                step = await PostPartAsync(client, userId, token, fields, cancellationToken);
+                step = await PostPartAsync(context, client, userId, token, fields, cancellationToken);
             }
             catch (Exception ex)
             {
@@ -172,7 +179,7 @@ public sealed class CreateThreadsPostAction : ActionBase<CreateThreadsPostSettin
             : StepRunErrorCategory.ServiceUnavailable);
 
     /// <summary>Creates, waits for and publishes one container. Never throws.</summary>
-    private async Task<Part> PostPartAsync(HttpClient client, string userId, string token, Dictionary<string, string> fields, CancellationToken cancellationToken)
+    private async Task<Part> PostPartAsync(ActionContext context, HttpClient client, string userId, string token, Dictionary<string, string> fields, CancellationToken cancellationToken)
     {
         string containerId;
         try
@@ -182,8 +189,8 @@ public sealed class CreateThreadsPostAction : ActionBase<CreateThreadsPostSettin
             if (!created.IsSuccessStatusCode)
             {
                 // Nothing is live until the container is published, so this is never an unknown outcome.
-                return new Part(null, PostOutcome.FromPreparationResponse(Network, "post preparation", created.StatusCode, createdBody),
-                    $"{Network} returned {(int)created.StatusCode}: {createdBody}", false);
+                return new Part(null, PostOutcome.FromPreparationResponse(context, Network, "post preparation", created.StatusCode, createdBody, graph: true, headers: created.Headers),
+                    NetworkError.Plain(Network, "post preparation", created.StatusCode, createdBody), false);
             }
 
             using (var doc = JsonDocument.Parse(createdBody))
@@ -191,7 +198,7 @@ public sealed class CreateThreadsPostAction : ActionBase<CreateThreadsPostSettin
                 containerId = doc.RootElement.GetProperty("id").GetString()!;
             }
 
-            var notReady = await WaitUntilProcessedAsync(client, containerId, token, cancellationToken);
+            var notReady = await WaitUntilProcessedAsync(context, client, containerId, token, cancellationToken);
             if (notReady is not null)
             {
                 return new Part(null, notReady.Value.Failure, notReady.Value.Detail, false);
@@ -212,8 +219,8 @@ public sealed class CreateThreadsPostAction : ActionBase<CreateThreadsPostSettin
             var body = await published.Content.ReadAsStringAsync(cancellationToken);
             if (!published.IsSuccessStatusCode)
             {
-                return new Part(null, PostOutcome.FromResponse(Network, published.StatusCode, body, idempotent: false),
-                    $"{Network} returned {(int)published.StatusCode}: {body}", ThreadParts.IsAmbiguous(published.StatusCode));
+                return new Part(null, PostOutcome.FromResponse(context, Network, published.StatusCode, body, idempotent: false, graph: true, headers: published.Headers),
+                    NetworkError.Plain(Network, null, published.StatusCode, body), ThreadParts.IsAmbiguous(published.StatusCode));
             }
 
             // Read inside the try: Threads accepted the publish, so an answer that can't be read leaves the part live, never retried.
@@ -226,7 +233,7 @@ public sealed class CreateThreadsPostAction : ActionBase<CreateThreadsPostSettin
         }
     }
 
-    private async Task<(ActionResult Failure, string Detail)?> WaitUntilProcessedAsync(HttpClient client, string containerId, string token, CancellationToken cancellationToken)
+    private async Task<(ActionResult Failure, string Detail)?> WaitUntilProcessedAsync(ActionContext context, HttpClient client, string containerId, string token, CancellationToken cancellationToken)
     {
         for (var check = 0; check < MaxStatusChecks; check++)
         {
@@ -234,7 +241,7 @@ public sealed class CreateThreadsPostAction : ActionBase<CreateThreadsPostSettin
             var body = await response.Content.ReadAsStringAsync(cancellationToken);
             if (!response.IsSuccessStatusCode)
             {
-                return (PostOutcome.FromPreparationResponse(Network, "processing check", response.StatusCode, body), $"{Network} returned {(int)response.StatusCode}: {body}");
+                return (PostOutcome.FromPreparationResponse(context, Network, "processing check", response.StatusCode, body, graph: true, headers: response.Headers), NetworkError.Plain(Network, "processing check", response.StatusCode, body));
             }
 
             using var doc = JsonDocument.Parse(body);

@@ -216,14 +216,16 @@ public class CreatePostActionTests
     {
         var handler = new Mock<HttpMessageHandler>();
         handler.SetupRequest(HttpMethod.Post, Pds + "com.atproto.server.createSession")
-               .ReturnsResponse(HttpStatusCode.Unauthorized, new StringContent("""{"error":"AuthenticationRequired"}"""));
+               .ReturnsResponse(HttpStatusCode.Unauthorized, new StringContent(LiveFixture.Text("error-401-sign-in")));
 
         var result = await Sut(handler).ExecuteAsync(
             ActionTestHarness.Context(new CreatePostSettings { Text = "hi" }, Conn), default);
 
         result.ErrorCategory.Should().Be(StepRunErrorCategory.Authentication);
+        result.Exception!.Message.Should().Be("Invalid identifier or password");
     }
 
+    // Docs-based: no 5xx was seen live.
     [Fact]
     public async Task Server_error_on_create_is_not_retried()
     {

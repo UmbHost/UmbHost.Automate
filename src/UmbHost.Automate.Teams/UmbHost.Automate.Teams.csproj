@@ -24,8 +24,10 @@
     <SymbolPackageFormat>snupkg</SymbolPackageFormat>
   </PropertyGroup>
 
+  <!-- 17.5.0 is the first Automate release that keeps an action's own log with the step run (ActionContext.LogError, redacted by its
+       sanitiser), which the shared error reader writes to (see Shared/NetworkError.cs). -->
   <ItemGroup>
-    <PackageReference Include="Umbraco.Automate.Core" Version="[17.4.0, 19.0.0)" />
+    <PackageReference Include="Umbraco.Automate.Core" Version="[17.5.0, 19.0.0)" />
     <PackageReference Include="Umbraco.Cms.Core" Version="[17.6.0, 19.0.0)" />
   </ItemGroup>
 

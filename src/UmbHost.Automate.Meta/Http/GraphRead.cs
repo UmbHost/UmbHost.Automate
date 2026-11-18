@@ -1,4 +1,5 @@
 using Umbraco.Automate.Core.Actions;
+using UmbHost.Automate.Meta.Connection;
 using UmbHost.Automate.Social;
 
 namespace UmbHost.Automate.Meta.Http;
@@ -34,7 +35,7 @@ internal sealed class GraphRead
     };
 
     /// <summary>GETs <paramref name="path"/> and classifies a failed answer with <see cref="GraphError"/>.</summary>
-    public static async Task<GraphRead> GetAsync(HttpClient client, string network, string path, CancellationToken cancellationToken)
+    public static async Task<GraphRead> GetAsync(ActionContext context, HttpClient client, string network, string path, CancellationToken cancellationToken)
     {
         try
         {
@@ -45,10 +46,16 @@ internal sealed class GraphRead
                 return new GraphRead { Body = body };
             }
 
+            // A deprecated version is the whole step's (the admin must move it on), not each post's.
+            if (MetaGraphVersion.Refused(context, network, "metrics", MetaGraphVersion.VersionOf(client), response.StatusCode, body) is { } refused)
+            {
+                return new GraphRead { Failure = refused };
+            }
+
             var kind = GraphError.Classify(response.StatusCode, body);
             return kind is GraphError.Kind.Permission or GraphError.Kind.NotFound or GraphError.Kind.Rejected
                 ? new GraphRead { PostError = kind }
-                : new GraphRead { Failure = GraphError.Fail(network, kind, response.StatusCode, body) };
+                : new GraphRead { Failure = GraphError.Fail(context, network, kind, response.StatusCode, body) };
         }
         catch (Exception ex) when (ReadOutcome.IsTransport(ex))
         {

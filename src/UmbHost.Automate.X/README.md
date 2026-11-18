@@ -2,7 +2,7 @@
 
 X (Twitter) connection (OAuth 2.0) and **Create X Post** and **Get X Post Metrics** actions for [Umbraco Automate](https://github.com/umbraco/Umbraco.Automate).
 
-Requires Umbraco Automate 17.4+ / 18.4+, `Umbraco.Automate.OpenIddict`, and Umbraco CMS 17.6+.
+Requires Umbraco Automate 17.5+ / 18.5+, `Umbraco.Automate.OpenIddict`, and Umbraco CMS 17.6+.
 
 ## Cost
 
@@ -43,7 +43,7 @@ This package is tested against mocked X API responses only, built from X's publi
 | Setting | Notes |
 |---|---|
 | Text | 280 weighted characters; links count as 23, emoji and CJK as 2. X rejects longer posts. |
-| Image URL | Optional https URL of a JPEG, PNG, GIF or WebP, up to 5 MB. |
+| Image URL | Optional https URL of a JPEG, PNG or WebP up to 5 MB, or a GIF (animated or not) up to 15 MB, uploaded with X's chunked upload as `tweet_gif`. |
 | Image Alt Text | Up to 1000 characters. |
 
 Output: `postId`, `postUrl`.
