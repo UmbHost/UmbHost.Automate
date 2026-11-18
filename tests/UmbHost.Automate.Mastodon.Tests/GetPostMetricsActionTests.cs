@@ -46,28 +46,56 @@ public class GetPostMetricsActionTests
             .Select(p => Uri.UnescapeDataString(p[1]))
             .ToList();
 
-    /// <summary>A Status shaped as https://docs.joinmastodon.org/entities/Status/ (trimmed to what we read plus identity).</summary>
+    /// <summary>
+    /// A real Status (the live public or unlisted post from umbracocommunity.social, Mastodon 4.7.5, Fixtures/Live) under another id,
+    /// with counts 1 to 4 so each name is told apart (the live posts' counts were mostly 0). Without quotes it is docs-based: an instance
+    /// before 4.5.0 has no <c>quotes_count</c>.
+    /// </summary>
     private static JsonObject Status(string id, string visibility = "public", bool withQuotes = true)
     {
-        var status = new JsonObject
+        var status = LiveFixture.Object(visibility == "unlisted" ? "status-unlisted" : "status-plain");
+        status["id"] = id;
+        status["uri"] = $"https://mastodon.social/users/example/statuses/{id}";
+        status["url"] = $"https://mastodon.social/@example/{id}";
+        status["replies_count"] = 3;
+        status["reblogs_count"] = 2;
+        status["favourites_count"] = 1;
+        status["quotes_count"] = 4;
+        if (!withQuotes)
         {
-            ["id"] = id,
-            ["created_at"] = "2026-11-11T09:00:00.000Z",
-            ["visibility"] = visibility,
-            ["uri"] = $"https://mastodon.social/users/umbhost/statuses/{id}",
-            ["url"] = $"https://mastodon.social/@umbhost/{id}",
-            ["replies_count"] = 3,
-            ["reblogs_count"] = 2,
-            ["favourites_count"] = 1,
-            ["content"] = "<p>Hello</p>",
-            ["account"] = new JsonObject { ["id"] = "1", ["username"] = "umbhost", ["acct"] = "umbhost" },
-        };
-        if (withQuotes)
-        {
-            status["quotes_count"] = 4;
+            status.Remove("quotes_count");
         }
 
         return status;
+    }
+
+    /// <summary>Every live status, in the order the account's timeline gave them.</summary>
+    private static readonly string[] LiveStatuses =
+    [
+        "status-plain", "status-unlisted", "status-thread-reply", "status-content-warning-thread-start", "status-link-card", "status-image",
+    ];
+
+    [Fact]
+    public async Task live_statuses_read_back_their_real_counts()
+    {
+        var handler = new Mock<HttpMessageHandler>();
+        var live = LiveStatuses.Select(LiveFixture.Object).ToList();
+        handler.SetupRequest(HttpMethod.Get, IsBatch)
+               .ReturnsResponse(HttpStatusCode.OK, new StringContent(new JsonArray(live.Select(s => (JsonNode)s).ToArray()).ToJsonString()));
+        var ids = live.Select(s => s["id"]!.GetValue<string>()).ToArray();
+
+        var results = Results(await Sut(handler).ExecuteAsync(Context(ids), default));
+
+        results.Should().OnlyContain(r => r.State == "ok");
+        // Mastodon 4.7.5 sends quotes_count, so all four names come back for every status, the image and link-card ones included.
+        results.Should().OnlyContain(r => r.Values.Count == 4);
+        // The thread's first post had the one reply; nothing else had been replied to, boosted, favourited or quoted.
+        var threadStart = LiveFixture.Object("status-content-warning-thread-start")["id"]!.GetValue<string>();
+        results.Single(r => r.Id == threadStart).Values.Should().BeEquivalentTo(new Dictionary<string, decimal>
+        {
+            ["favourites_count"] = 0, ["reblogs_count"] = 0, ["replies_count"] = 1, ["quotes_count"] = 0,
+        });
+        results.Where(r => r.Id != threadStart).Should().OnlyContain(r => r.Values.Values.All(v => v == 0));
     }
 
     /// <summary>Answers the batch route with each id asked for, except those missing (the docs: fewer records than requested).</summary>
