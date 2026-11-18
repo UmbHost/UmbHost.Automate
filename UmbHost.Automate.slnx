@@ -7,6 +7,7 @@
     <Project Path="src/UmbHost.Automate.Mastodon/UmbHost.Automate.Mastodon.csproj" />
     <Project Path="src/UmbHost.Automate.Meta/UmbHost.Automate.Meta.csproj" />
     <Project Path="src/UmbHost.Automate.Pinterest/UmbHost.Automate.Pinterest.csproj" />
+    <Project Path="src/UmbHost.Automate.Teams/UmbHost.Automate.Teams.csproj" />
     <Project Path="src/UmbHost.Automate.Teamwork/UmbHost.Automate.Teamwork.csproj" />
     <Project Path="src/UmbHost.Automate.Threads/UmbHost.Automate.Threads.csproj" />
     <Project Path="src/UmbHost.Automate.X/UmbHost.Automate.X.csproj" />
@@ -19,6 +20,7 @@
     <Project Path="tests/UmbHost.Automate.Mastodon.Tests/UmbHost.Automate.Mastodon.Tests.csproj" />
     <Project Path="tests/UmbHost.Automate.Meta.Tests/UmbHost.Automate.Meta.Tests.csproj" />
     <Project Path="tests/UmbHost.Automate.Pinterest.Tests/UmbHost.Automate.Pinterest.Tests.csproj" />
+    <Project Path="tests/UmbHost.Automate.Teams.Tests/UmbHost.Automate.Teams.Tests.csproj" />
     <Project Path="tests/UmbHost.Automate.Teamwork.Tests/UmbHost.Automate.Teamwork.Tests.csproj" />
     <Project Path="tests/UmbHost.Automate.Threads.Tests/UmbHost.Automate.Threads.Tests.csproj" />
     <Project Path="tests/UmbHost.Automate.X.Tests/UmbHost.Automate.X.Tests.csproj" />
