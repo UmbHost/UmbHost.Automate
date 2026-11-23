@@ -44,8 +44,9 @@ public sealed class XOAuthComposer : IComposer
             return;
         }
 
+        // Automate renews tokens with the refresh grant but enables only the authorisation code flow, so it is enabled here.
         builder.Services.AddOpenIddict()
-            .AddClient(options => options.UseWebProviders()
+            .AddClient(options => options.AllowRefreshTokenFlow().UseWebProviders()
                 .AddTwitter(x => x.AddScopes("tweet.read", "tweet.write", "users.read", "media.write", "offline.access")));
     }
 }

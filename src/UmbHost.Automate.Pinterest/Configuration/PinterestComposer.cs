@@ -52,8 +52,9 @@ public sealed class PinterestOAuthComposer : IComposer
         }
 
         var issuer = new Uri("https://www.pinterest.com/");
+        // Automate renews tokens with the refresh grant but enables only the authorisation code flow, so it is enabled here.
         builder.Services.AddOpenIddict()
-            .AddClient(options => options.AddRegistration(new OpenIddictClientRegistration
+            .AddClient(options => options.AllowRefreshTokenFlow().AddRegistration(new OpenIddictClientRegistration
             {
                 ProviderName = ProviderName,
                 ProviderDisplayName = "Pinterest",
