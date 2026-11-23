@@ -16,8 +16,9 @@ namespace UmbHost.Automate.Meta.Connection;
 /// (<c>data[] {permission, status}</c>, status granted, declined or expired:
 /// https://developers.facebook.com/docs/graph-api/reference/user/permissions/) and warns about any of <c>read_insights</c>,
 /// <c>pages_read_engagement</c>, <c>pages_read_user_content</c> and, with a linked Instagram account,
-/// <c>instagram_manage_insights</c> the token lacks. The page documents <c>/{user-id}/permissions</c>; reading it through
-/// <c>/me</c> with a Page token is <b>UNVERIFIED</b>, so a permissions call that fails or can't be read is a warning too, never a failure.
+/// <c>instagram_manage_insights</c> the token lacks. The page documents <c>/{user-id}/permissions</c>; read through <c>/me</c> with a
+/// Page token that could read its figures, it gave no usable answer (live, 2026-11-23). So when the call fails or can't be read nothing is
+/// said about permissions: a post whose metrics lack one comes back as needing it.
 /// While the switch is off nothing is checked: the permissions only matter to the metrics.
 /// </remarks>
 [ConnectionType("meta", "Facebook & Instagram",
@@ -95,9 +96,7 @@ public sealed class MetaConnectionType : ConnectionTypeBase<MetaConnectionSettin
             var missing = await MissingAsync(client, needed, cancellationToken);
             return ConnectionWarning.Add(missing switch
             {
-                null => ConnectionValidationResult.Warning(
-                    $"{message} Its insights permissions couldn't be checked, so post metrics may come back as needing permission.", null),
-                [] => ConnectionValidationResult.Success(message),
+                null or [] => ConnectionValidationResult.Success(message),
                 _ => ConnectionValidationResult.Warning(
                     $"{message} Post metrics need permissions this token lacks: {string.Join(", ", missing)}. Generate a new Page token with them.",
                     missing),

@@ -12,7 +12,7 @@ namespace UmbHost.Automate.Meta.Tests;
 /// <summary>
 /// While <c>Umbraco:Automate:Providers:Meta:Insights</c> is on, Validate reports the insights permissions the Page token lacks, as a
 /// warning, never a failure. <c>/{id}/permissions</c> answers <c>data[] {permission, status}</c> with status granted, declined or expired
-/// (https://developers.facebook.com/docs/graph-api/reference/user/permissions/); reading it with a Page token on <c>/me</c> is UNVERIFIED.
+/// (https://developers.facebook.com/docs/graph-api/reference/user/permissions/); read with a Page token on <c>/me</c> it gave no usable answer live, so then nothing is said.
 /// </summary>
 public class InsightsSettingTests
 {
@@ -97,21 +97,21 @@ public class InsightsSettingTests
     [Theory]
     [InlineData(HttpStatusCode.BadRequest, """{"error":{"message":"…","type":"OAuthException","code":100}}""")]
     [InlineData(HttpStatusCode.OK, "<html>")]
-    public async Task permissions_that_cant_be_read_are_a_warning_not_a_failure(HttpStatusCode status, string body)
+    public async Task permissions_that_cant_be_read_are_not_mentioned(HttpStatusCode status, string body)
     {
         var handler = Page();
         handler.SetupRequest(HttpMethod.Get, IsPermissions).ReturnsResponse(status, body);
 
         var result = await Sut(handler, "true").ValidateAsync(Conn, default);
 
-        result.Status.Should().Be(ConnectionValidationStatus.Warning);
-        result.Message.Should().Contain("Acme");
+        result.Status.Should().Be(ConnectionValidationStatus.Success);
+        result.Message.Should().Contain("Acme").And.NotContain("permission");
     }
 
     [Theory]
     [InlineData(false)]
     [InlineData(true)]
-    public async Task a_transport_failure_on_the_permissions_call_is_a_warning(bool timeout)
+    public async Task a_transport_failure_on_the_permissions_call_is_not_mentioned(bool timeout)
     {
         var handler = Page();
         handler.SetupRequest(HttpMethod.Get, IsPermissions)
@@ -119,8 +119,8 @@ public class InsightsSettingTests
 
         var result = await Sut(handler, "true").ValidateAsync(Conn, default);
 
-        result.Status.Should().Be(ConnectionValidationStatus.Warning);
-        result.Message.Should().Contain("Acme");
+        result.Status.Should().Be(ConnectionValidationStatus.Success);
+        result.Message.Should().Contain("Acme").And.NotContain("permission");
     }
 
     [Fact]

@@ -88,7 +88,7 @@ public sealed class ThreadsOAuthComposer : IComposer
                     },
                 };
 
-                // Insights need App Review; until the switch is on, connections aren't asked for the scope.
+                // Until the switch is on, connections aren't asked for the insights scope.
                 if (insights)
                 {
                     registration.Scopes.Add("threads_manage_insights");
