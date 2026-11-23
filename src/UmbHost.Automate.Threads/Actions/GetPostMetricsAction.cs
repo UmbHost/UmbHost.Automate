@@ -12,7 +12,7 @@ namespace UmbHost.Automate.Threads.Actions;
 /// </summary>
 /// <remarks>
 /// <para>
-/// Off until Meta approves the app for <c>threads_manage_insights</c>: <c>Umbraco:Automate:Providers:Threads:Insights</c> (default false;
+/// Off by default (it needs <c>threads_manage_insights</c>): <c>Umbraco:Automate:Providers:Threads:Insights</c> (default false;
 /// on only for "true", in any case). While it's off nothing goes to Threads, not even a token refresh, and every id is
 /// <c>needsPermission</c> with <c>insights_off</c>. Turning it on adds the scope to new authorisations; existing connections must be
 /// authorised again, and until they are their posts come back <c>needsPermission</c> / <c>scope_missing</c>.

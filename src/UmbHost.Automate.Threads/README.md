@@ -12,7 +12,7 @@ Requires Umbraco Automate 17.5+ / 18.5+, `Umbraco.Automate.OpenIddict` 17.1.5+, 
 
 1. In [Meta for Developers](https://developers.facebook.com/apps/), create an app with the **Access the Threads API** use case. Add the permissions `threads_basic`, `threads_content_publish` and `threads_manage_replies`.
 2. In the use case's settings, add the redirect callback URL `https://<your-site>/umbraco/automate/oauth/callback/threads`.
-3. Until the app passes Meta's app review, only Threads accounts added as testers can be connected.
+3. Meta decides what access the app needs, and whether it has to be reviewed. Add the Threads account as a tester.
 4. Config, with the **Threads app ID** and **Threads app secret** from the use case's settings (not the Meta app's own id and secret):
 
    ```jsonc
@@ -59,7 +59,7 @@ Reads posts' insights, one call per post, with `GET /v1.0/{media-id}/insights?me
 
 Output: `results`, one per id: `state` (`ok`, `gone`, `unavailable`, `needsPermission`), `values` and `reason`.
 
-**Off until Meta approves the app.** Insights need the `threads_manage_insights` permission, which needs App Review with a screencast of the post metrics shown in your site, and is for business apps only ([permissions](https://developers.facebook.com/docs/permissions)). Add it to the use case's permissions, get it approved, then turn the metrics on:
+**Off by default.** Insights need the `threads_manage_insights` permission; Meta decides what access the app needs, and whether it has to be reviewed ([permissions](https://developers.facebook.com/docs/permissions)). Add it to the use case's permissions, then turn the metrics on:
 
 ```jsonc
 { "Umbraco": { "Automate": { "Providers": { "Threads": { "Insights": true } } } } }

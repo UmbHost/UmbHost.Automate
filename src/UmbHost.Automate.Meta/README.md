@@ -10,7 +10,7 @@ Requires Umbraco Automate 17.5+ / 18.5+ and Umbraco CMS 17.6+.
 
 ## Setup
 
-1. Create a Meta app (type **Business**) and get it through App Review for `pages_manage_posts`, `pages_read_engagement`, `instagram_basic` and `instagram_content_publish`. The Instagram account must be a professional (Business or Creator) account linked to the Page.
+1. Create a Meta app (type **Business**) with the permissions `pages_manage_posts`, `pages_read_engagement`, `instagram_basic` and `instagram_content_publish`. Meta decides what access the app needs, and whether it has to be reviewed. The Instagram account must be a professional (Business or Creator) account linked to the Page.
 2. Get a Page access token that doesn't expire:
    1. Exchange a short-lived user token for a long-lived one:
       `GET https://graph.facebook.com/v27.0/oauth/access_token?grant_type=fb_exchange_token&client_id=…&client_secret=…&fb_exchange_token=…`
@@ -58,7 +58,7 @@ The Graph API has no idempotency key. Instagram's container steps are safe to re
 
 ## Post metrics
 
-**Off until Meta approves the app.** One switch covers both networks, because both go through the same Meta App Review:
+**Off by default.** One switch covers both networks:
 
 ```jsonc
 { "Umbraco": { "Automate": { "Providers": { "Meta": { "Insights": true } } } } }
@@ -66,7 +66,7 @@ The Graph API has no idempotency key. Instagram's container steps are safe to re
 
 Only `true` (in any case, surrounding spaces ignored) turns it on; anything else, or no value, leaves it off. While it's off both actions send nothing to Meta and return every id as `needsPermission` with reason `insights_off`.
 
-The Page token has to carry these permissions. Each needs App Review with a screencast of the metrics shown in your site, and Advanced Access needs Business Verification ([permissions](https://developers.facebook.com/docs/permissions)):
+The Page token has to carry these permissions. Meta decides what access the app needs, and whether it has to be reviewed ([permissions](https://developers.facebook.com/docs/permissions)):
 
 | Permission | For |
 |---|---|
@@ -75,7 +75,7 @@ The Page token has to carry these permissions. Each needs App Review with a scre
 | `pages_read_user_content` | Facebook post counts (from Meta's permissions reference; the post and reactions pages name only `pages_read_engagement`, so this is unconfirmed). |
 | `instagram_manage_insights` | Instagram insights (with `instagram_basic`, plus `ads_management` and `ads_read` if you have a Business Manager role on the Page). |
 
-The Page token is pasted in, so it carries whatever was granted when it was generated. While the switch is on, **Validate** checks the token and lists any of these four it lacks as a warning, never a failure (`instagram_manage_insights` only when an Instagram account is linked); generate a new Page token with them. Validate reads `/me/permissions` with the Page token. Meta documents that call for user ids only, so if it can't be read, Validate warns that the permissions couldn't be checked. While the switch is off, Validate doesn't check them.
+The Page token is pasted in, so it carries whatever was granted when it was generated. While the switch is on, **Validate** checks the token and lists any of these four it lacks as a warning, never a failure (`instagram_manage_insights` only when an Instagram account is linked); generate a new Page token with them. Validate reads `/me/permissions` with the Page token. Meta documents that call for user ids only, and it couldn't be read live with a Page token, so when it can't be read Validate says nothing about the permissions; a post whose metrics lack one comes back `needsPermission`. While the switch is off, Validate doesn't check them.
 
 ### Get Facebook Post Metrics
 
