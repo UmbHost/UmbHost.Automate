@@ -46,8 +46,9 @@ public sealed class GoogleBusinessOAuthComposer : IComposer
             return;
         }
 
+        // Automate renews tokens with the refresh grant but enables only the authorisation code flow, so it is enabled here.
         builder.Services.AddOpenIddict()
-            .AddClient(options => options.UseWebProviders()
+            .AddClient(options => options.AllowRefreshTokenFlow().UseWebProviders()
                 .AddGoogle(google => google
                     .AddScopes("https://www.googleapis.com/auth/business.manage")
                     .SetAccessType("offline")
