@@ -153,7 +153,7 @@ public sealed partial class CreateUpdateAction : ActionBase<CreateUpdateSettings
         }
 
         return ActionResult.Failed(
-            new InvalidOperationException($"{UnverifiedCode}: the location isn't verified in Google Business Profile, so it can't post updates yet. Verify it in Google Business Profile, then post again."),
+            new InvalidOperationException($"{UnverifiedCode}: Google doesn't let this location post updates at the moment: it may not be verified, or it may be suspended or have an ownership conflict. Check it in Google Business Profile, then post again."),
             StepRunErrorCategory.Validation);
     }
 

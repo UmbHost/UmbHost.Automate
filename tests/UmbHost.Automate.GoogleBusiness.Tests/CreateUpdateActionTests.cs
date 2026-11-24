@@ -178,13 +178,13 @@ public class CreateUpdateActionTests
         var handler = new Mock<HttpMessageHandler>();
         handler.SetupRequest(HttpMethod.Get, "https://mybusinessaccountmanagement.googleapis.com/v1/accounts?pageSize=20")
             .ReturnsResponse(HttpStatusCode.OK, """{"accounts":[{"name":"accounts/111","accountName":"Cafe Group","type":"PERSONAL"}]}""");
-        handler.SetupRequest(HttpMethod.Get, "https://mybusinessbusinessinformation.googleapis.com/v1/accounts/111/locations?readMask=name,title&pageSize=100")
-            .ReturnsResponse(HttpStatusCode.OK, """{"locations":[{"name":"locations/222","title":"Cafe Leeds"},{"name":"locations/223","title":"Cafe York"}]}""");
+        handler.SetupRequest(HttpMethod.Get, "https://mybusinessbusinessinformation.googleapis.com/v1/accounts/111/locations?readMask=name,title,storefrontAddress&pageSize=100")
+            .ReturnsResponse(HttpStatusCode.OK, """{"locations":[{"name":"locations/222","title":"Cafe","storefrontAddress":{"addressLines":["1 High Street"],"locality":"Leeds","postalCode":"LS1 1AA"}},{"name":"locations/223","title":"Cafe"}]}""");
 
         var result = await Connection(handler).ValidateAsync(Conn, default);
 
         result.Status.Should().Be(ConnectionValidationStatus.Success);
-        result.Message.Should().Contain("Cafe Leeds (accounts/111/locations/222)\nCafe York (accounts/111/locations/223)");
+        result.Message.Should().Contain("Cafe, 1 High Street, Leeds, LS1 1AA (accounts/111/locations/222)\nCafe (accounts/111/locations/223)");
     }
 
     [Fact]
@@ -193,7 +193,7 @@ public class CreateUpdateActionTests
         var handler = new Mock<HttpMessageHandler>();
         handler.SetupRequest(HttpMethod.Get, "https://mybusinessaccountmanagement.googleapis.com/v1/accounts?pageSize=20")
             .ReturnsResponse(HttpStatusCode.OK, """{"accounts":[{"name":"accounts/111","accountName":"Cafe Group"}]}""");
-        handler.SetupRequest(HttpMethod.Get, "https://mybusinessbusinessinformation.googleapis.com/v1/accounts/111/locations?readMask=name,title&pageSize=100")
+        handler.SetupRequest(HttpMethod.Get, "https://mybusinessbusinessinformation.googleapis.com/v1/accounts/111/locations?readMask=name,title,storefrontAddress&pageSize=100")
             .ReturnsResponse(HttpStatusCode.OK, "{}");
 
         var result = await Connection(handler).ValidateAsync(Conn, default);
