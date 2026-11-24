@@ -23,7 +23,7 @@ Requires Umbraco Automate 17.5+ / 18.5+, `Umbraco.Automate.OpenIddict`, and Umbr
    }
    ```
 
-   The package adds the `w_organization_social`, `r_organization_social` and `rw_organization_admin` scopes itself, whatever the Insights switch says. Without a `ClientId` the provider is skipped and everything else still loads.
+   The package adds the `w_organization_social`, `w_organization_social_feed` (the first comment), `r_organization_social` and `rw_organization_admin` scopes itself, whatever the Insights switch says. Without a `ClientId` the provider is skipped and everything else still loads.
 5. **Automate → Connections → Create → LinkedIn → Authorize**, signed in as a member with the **Administrator** role on the page. The connection asks for `rw_organization_admin`, which LinkedIn restricts to page Administrators, so a Content admin can't connect.
 6. **Test connection** lists the company pages the account can post as, `Name (id)`, so you can copy the organization id from there. If LinkedIn refuses to list them (403), the test warns: re-authorise as a page Administrator. The id is also in the page's admin URL (`linkedin.com/company/<id>/admin`).
 

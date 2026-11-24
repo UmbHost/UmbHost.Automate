@@ -87,7 +87,7 @@ public class OAuthRegistrationTests
     [InlineData("True")]
     [InlineData(" true ")]
     public void Asks_for_the_same_scopes_whatever_the_insights_switch_says(string? insights)
-        => Registration(insights).Scopes.Should().BeEquivalentTo(["w_organization_social", "r_organization_social", "rw_organization_admin"]);
+        => Registration(insights).Scopes.Should().BeEquivalentTo(["w_organization_social", "w_organization_social_feed", "r_organization_social", "rw_organization_admin"]);
 
     [Fact]
     public void Configuration_has_linkedins_endpoints_and_no_userinfo()
