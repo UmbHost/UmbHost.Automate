@@ -9,8 +9,8 @@ namespace UmbHost.Automate.GoogleBusiness.Connection;
 
 /// <summary>
 /// Google Business Profile connection type using OAuth via OpenIddict's Google provider (<see cref="GoogleBusinessOAuthComposer"/>).
-/// Testing the connection lists the account's locations as "Title (accounts/…/locations/…)", so the location a channel needs can be
-/// copied from there.
+/// Testing the connection lists the account's locations as "Title, address (accounts/…/locations/…)", so the location a channel
+/// needs can be copied from there and locations of the same name told apart (one with no shown address has its title only).
 /// </summary>
 [ConnectionType("google-business", "Google Business Profile",
     Group = "Social",
@@ -58,8 +58,8 @@ public sealed class GoogleBusinessConnectionType : OAuthConnectionTypeBase<Googl
         foreach (var account in accounts)
         {
             failure = await PagesAsync(client,
-                $"https://mybusinessbusinessinformation.googleapis.com/v1/{account}/locations?readMask=name,title&pageSize=100", "locations",
-                location => locations.Add($"{location.GetProperty("title").GetString()} ({account}/{location.GetProperty("name").GetString()})"),
+                $"https://mybusinessbusinessinformation.googleapis.com/v1/{account}/locations?readMask=name,title,storefrontAddress&pageSize=100", "locations",
+                location => locations.Add($"{Label(location)} ({account}/{location.GetProperty("name").GetString()})"),
                 cancellationToken);
             if (failure is not null)
             {
@@ -71,6 +71,26 @@ public sealed class GoogleBusinessConnectionType : OAuthConnectionTypeBase<Googl
             ? ConnectionValidationResult.Warning("No locations found: add your business to Google Business Profile first.", null)
             : ConnectionValidationResult.Success("Google Business Profile is connected. Use one of these locations in the channel:\n" + string.Join("\n", locations));
     }
+
+    private static string Label(JsonElement location)
+    {
+        var parts = new List<string?> { location.GetProperty("title").GetString() };
+        if (location.TryGetProperty("storefrontAddress", out var address))
+        {
+            if (address.TryGetProperty("addressLines", out var lines))
+            {
+                parts.AddRange(lines.EnumerateArray().Select(line => line.GetString()));
+            }
+
+            parts.Add(Text(address, "locality"));
+            parts.Add(Text(address, "postalCode"));
+        }
+
+        return string.Join(", ", parts.Where(part => !string.IsNullOrWhiteSpace(part)));
+    }
+
+    private static string? Text(JsonElement element, string property)
+        => element.TryGetProperty(property, out var value) ? value.GetString() : null;
 
     private static async Task<ConnectionValidationResult?> PagesAsync(
         HttpClient client, string url, string property, Action<JsonElement> each, CancellationToken cancellationToken)

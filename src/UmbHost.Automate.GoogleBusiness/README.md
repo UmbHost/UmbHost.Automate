@@ -28,7 +28,7 @@ This package is tested against mocked Google Business Profile API responses only
    ```
 
    The package requests the `business.manage` scope with offline access, so tokens renew automatically. Without a `ClientId` the provider is skipped and everything else still loads.
-5. **Automate → Connections → Create → Google Business Profile → Authorize.** **Validate** lists your locations as "Title (accounts/…/locations/…)".
+5. **Automate → Connections → Create → Google Business Profile → Authorize.** **Validate** lists your locations as "Title, address (accounts/…/locations/…)", so locations with the same name can be told apart.
 
 ## Create Google Business Update
 
@@ -40,7 +40,7 @@ This package is tested against mocked Google Business Profile API responses only
 | Button | `BOOK`, `ORDER`, `SHOP`, `SIGN_UP`, `LEARN_MORE` (the default) or `CALL` (calls the business's phone number; no link needed). |
 | Image URL | Optional public https URL of a JPEG or PNG; Google fetches it. |
 
-A location that isn't verified can't post: the step fails with `google_business.location_unverified` before anything is sent.
+A location Google doesn't let post (it isn't verified, or it is suspended or has an ownership conflict, for example) can't post: the step fails with `google_business.location_unverified` before anything is sent.
 
 Output: `postId`, `postUrl` (the update in Google Search).
 
