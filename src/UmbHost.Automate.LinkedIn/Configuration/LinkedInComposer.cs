@@ -33,7 +33,7 @@ public sealed class LinkedInComposer : IComposer
 /// <summary>
 /// Registers LinkedIn with the OpenIddict client by hand, as a plain OAuth 2.0 provider: authorisation and token endpoints only, no
 /// userinfo, no <c>openid</c> and no <c>profile</c>. It always asks for <c>w_organization_social</c> and
-/// <c>r_organization_social</c> (posting) and <c>rw_organization_admin</c> (listing the account's pages on Test connection, and share
+/// <c>r_organization_social</c> (posting), <c>w_organization_social_feed</c> (the first comment: without it LinkedIn answers 403, seen live) and <c>rw_organization_admin</c> (listing the account's pages on Test connection, and share
 /// statistics), on top of any configured ones. The Insights switch only turns the statistics reads on or off; it doesn't change the
 /// scopes, so turning it on needs no re-authorisation. <c>rw_organization_admin</c> is restricted to page Administrators
 /// (https://learn.microsoft.com/en-us/linkedin/marketing/increasing-access), so whoever authorises must be one. Automate's
@@ -66,7 +66,7 @@ public sealed class LinkedInOAuthComposer : IComposer
     public const string ProviderName = "LinkedIn";
 
     /// <summary>The scopes every authorisation asks for, whatever the Insights switch says.</summary>
-    internal static readonly string[] Scopes = ["w_organization_social", "r_organization_social", "rw_organization_admin"];
+    internal static readonly string[] Scopes = ["w_organization_social", "w_organization_social_feed", "r_organization_social", "rw_organization_admin"];
 
     public void Compose(IUmbracoBuilder builder)
     {
